@@ -1,5 +1,33 @@
 # Zigbee 3.0 Firmware for original LYWSD03MMC Sensor
 
+This repository forked from [devbis/z03mmc](https://github.com/devbis/z03mmc) (!)
+
+Текущие дополнения:
+
+1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность ипорта 'Existing Project' в "Telink IoT Studio".
+
+Для сборки под Linux требуется выполнить:
+
+```
+git clone https://github.com/pvvx/z03mmc
+make install
+make
+```
+
+```
+git clone https://github.com/pvvx/z03mmc
+make install
+make
+```
+Под Window, после импорта в ‘Telink IoT Studio’, выполнить “make install” или в папке проекта:
+```
+git clone https://github.com/devbis/tl_zigbee_sdk.git -b 3.6.8.5 --depth 1 ./SDK
+```
+И включить многопоточную сборку для сборки всего проекта с нуля за 2 сек.
+
+
+---
+
 This repository contains the Zigbee firmware for Xiaomi LYWSD03MMC Bluetooth temperature and humidity sensor.
 
 ## Overview

@@ -245,7 +245,8 @@ void report_handler(void)
 			reportNoMinLimit();
 
 			//start report timer
-			app_reportAttrTimerStart();
+			// app_reportAttrTimerStart();
+			reportAttrTimerStart(1);
 			// reportAttrTimerStart(second);
 		}else{
 			//stop report timer
