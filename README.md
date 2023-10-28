@@ -13,6 +13,34 @@ git clone https://github.com/pvvx/z03mmc
 make install
 make
 ```
+
+Out log:
+```
+Warning: Undefined symbol 'mac_public'!
+Warning: Undefined symbol 'ss_apsmeSwitchKeyReq'!
+Warning: Undefined symbol 'ss_apsmeTransportKeyReq'!
+Warning: Undefined symbol 'tl_zbNwkBeaconPayloadUpdate'!
+===================================================================
+ Section|          Description| Start (hex)|   End (hex)|Used space
+-------------------------------------------------------------------
+ ramcode|   Resident Code SRAM|           0|        1510|    5392
+    text|           Code Flash|        1510|       1F710|  123392
+  rodata| Read Only Data Flash|           0|           0|       0
+  rtdata|       Retention SRAM|           0|           0|       0
+      nc|   Wasteful Area SRAM|      841510|      841600|     240
+   ictag|     Cache Table SRAM|      841600|      841700|     256
+  icdata|      Cache Data SRAM|      841700|      841F00|    2048
+    data|       Init Data SRAM|      841F00|      8420E4|     484
+     bss|        BSS Data SRAM|      8420F0|      8452E4|   12788
+ irq_stk|        BSS Data SRAM|      8420F0|      8422F0|     512
+   stack|       CPU Stack SRAM|      8452E4|      850000|   44316
+   flash|       Bin Size Flash|           0|       1F8F4|  129268
+-------------------------------------------------------------------
+Start Load SRAM : 0 (ICtag: 0x0)
+Total Used SRAM : 21220 from 65536
+Total Free SRAM : 240 + stack[44316] = 44556
+```
+
 Под Window, после импорта в ‘Telink IoT Studio’, выполнить “make install” или в папке проекта:
 ```
 git clone https://github.com/devbis/tl_zigbee_sdk.git -b 3.6.8.5 --depth 1 ./SDK
