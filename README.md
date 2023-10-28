@@ -13,12 +13,6 @@ git clone https://github.com/pvvx/z03mmc
 make install
 make
 ```
-
-```
-git clone https://github.com/pvvx/z03mmc
-make install
-make
-```
 Под Window, после импорта в ‘Telink IoT Studio’, выполнить “make install” или в папке проекта:
 ```
 git clone https://github.com/devbis/tl_zigbee_sdk.git -b 3.6.8.5 --depth 1 ./SDK
