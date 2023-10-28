@@ -13,6 +13,7 @@ $(OUT_PATH)$(SRC_DIR)/shtv3_sensor.o \
 $(OUT_PATH)$(SRC_DIR)/zb_appCb.o \
 $(OUT_PATH)$(SRC_DIR)/custom_zcl/zcl_relative_humidity.o \
 $(OUT_PATH)$(SRC_DIR)/zcl_sensorCb.o \
+$(OUT_PATH)$(SRC_DIR)/reporting.o \
 $(OUT_PATH)$(SRC_DIR)/common/main.o \
 $(OUT_PATH)$(SRC_DIR)/common/factory_reset.o \
 $(OUT_PATH)$(SRC_DIR)/common/firmwareEncryptChk.o \
