@@ -5,6 +5,11 @@
 #include "zcl_include.h"
 #include "zcl_relative_humidity.h"
 #include "device.h"
+#if 0
+#define ZCL_BASIC_MFG_NAME     {0x04,'L','U','M','I'}
+#define ZCL_BASIC_MODEL_ID	   {0x0e,'l','u','m','i','.','s','e','n','s','o','r','_','h','t'} // lumi.sensor_ht
+#define ZCL_BASIC_SW_BUILD_ID  {0x09,'3','0','0','0','-','0','0','0','1'} // "3000-0001"
+#endif
 
 /**********************************************************************
  * LOCAL CONSTANTS
@@ -30,11 +35,11 @@
 #endif // MIMIC_HEIMAN
 
 #ifndef ZCL_BASIC_SW_BUILD_ID
-#define ZCL_BASIC_SW_BUILD_ID     	{9,'0','0','0','0','-','0','0','0','0'}
+#define ZCL_BASIC_SW_BUILD_ID     	{9,'3','0','0','0','-','0','0','0','1'}
 #endif
 
 #ifndef ZCL_BASIC_DATE_CODE
-#define ZCL_BASIC_DATE_CODE     	{8,'0','0','0','0','0','0','0','0'}
+#define ZCL_BASIC_DATE_CODE     	{8,'2','0','1','6','0','5','1','6'}
 #endif
 
 

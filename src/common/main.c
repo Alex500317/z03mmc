@@ -44,6 +44,14 @@ int main(void){
 	moduleTest_start();
 #endif
 
+	/* reduce power consumption, disable CLK disable CLK of unused peripherals*/
+
+	reg_clk_en0 = 0 // FLD_CLK0_SPI_EN
+#if UART_PRINTF_MODE
+			| FLD_CLK0_UART_EN
+#endif
+			| FLD_CLK0_SWIRE_EN;
+
 	user_init(isRetention);
 
 	drv_enable_irq();
@@ -59,7 +67,7 @@ int main(void){
 
 	while(1){
 #if VOLTAGE_DETECT_ENABLE
-		if(clock_time_exceed(tick, 200 * 1000)){
+		if(clock_time_exceed(tick, 200 * 1000)){ // 200 ms
 			voltage_detect(0);
 			tick = clock_time();
 		}

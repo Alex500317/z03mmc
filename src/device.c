@@ -14,10 +14,11 @@
 
 #include "zcl_relative_humidity.h"
 #include "app_i2c.h"
-#include "shtv3_sensor.h"
+#include "sensor.h"
 #include "lcd.h"
 #include "reporting.h"
 
+#define SENSOR_USE_TIMER	0
 
 /**********************************************************************
  * LOCAL CONSTANTS
@@ -165,10 +166,10 @@ void user_app_init(void)
     ota_init(OTA_TYPE_CLIENT, (af_simple_descriptor_t *)&sensorDevice_simpleDesc, &sensorDevice_otaInfo, &sensorDevice_otaCb);
 #endif
 
-	show_zigbe();
+//	show_zigbe();
 
     // read sensor every 10 seconds
-    read_sensor_start(10000);
+    // read_sensor_start(10000);
 }
 
 _attribute_ram_code_
@@ -180,39 +181,30 @@ u8 is_comfort(s16 t, u16 h) {
 }
 
 void read_sensor_and_save() {
-	s16 temp = 0;
-	u16 humi = 0;
-    u16 voltage, percentage;
-	u8 converted_voltage, percentage2;
-
-	read_sensor(&temp,&humi);
+	read_sensor();
     // printf("Temp: %d.%d, humid: %d\r\n", temp/10, temp % 10, humi);
-    g_zcl_temperatureAttrs.measuredValue = temp;
-    g_zcl_relHumidityAttrs.measuredValue = humi;
-
-    voltage = drv_get_adc_data();
-    converted_voltage = (u8)(voltage / 100);
-	percentage = ((voltage - BATTERY_SAFETY_THRESHOLD) / 4);
-	if (percentage > 0xc8) percentage = 0xc8;
-	percentage2 = (u8)percentage;
+    g_zcl_temperatureAttrs.measuredValue = measured_data.temp;
+    g_zcl_relHumidityAttrs.measuredValue = measured_data.humi;
 
 	// printf("converted voltage %d diff %d", converted_voltage, (voltage - BATTERY_SAFETY_THRESHOLD));
 	//printf(" , percentage2 %d\r\n", percentage2);
-    g_zcl_powerAttrs.batteryVoltage = converted_voltage;
-    g_zcl_powerAttrs.batteryPercentage = percentage2;
+    g_zcl_powerAttrs.batteryVoltage = (u8)(measured_data.battery_mv / 100);
+    g_zcl_powerAttrs.batteryPercentage = measured_data.battery_level;
 
     // update lcd
     show_temp_symbol(1);
-    show_big_number(g_zcl_temperatureAttrs.measuredValue / 10, 1);
-    show_small_number(g_zcl_relHumidityAttrs.measuredValue / 100, 1);
+    show_big_number(measured_data.temp / 10, 1);
+    show_small_number(measured_data.humi / 100, 1);
+    show_battery_symbol(measured_data.battery_level < 5);
 #if defined(SHOW_SMILEY)
     show_smiley(
-        is_comfort(g_zcl_temperatureAttrs.measuredValue, g_zcl_relHumidityAttrs.measuredValue) ? 1 : 2
+        is_comfort(measured_data.temp, measured_data.humi) ? 1 : 2
     );
 #endif
     update_lcd();
 }
 
+#if SENSOR_USE_TIMER
 s32 zclSensorTimerCb(void *arg)
 {
 	u32 interval = g_sensorAppCtx.readSensorTime;
@@ -232,6 +224,8 @@ void read_sensor_start(u16 delayTime)
 		g_sensorAppCtx.timerReadSensorEvt = TL_ZB_TIMER_SCHEDULE(zclSensorTimerCb, NULL, interval);
 	}
 }
+
+#endif
 
 void ind_init(void)
 {
@@ -335,17 +329,17 @@ B1.7 | 0x3C           | 0x44   (SHT4x)    | Test   original string HW
 B1.9 | 0x3E           | 0x44   (SHT4x)    |
 B2.0 | 0x3C           | 0x44   (SHT4x)    | Test   original string HW
 	*/
-    if (lcd_version == 0) {
+    if (i2c_address_lcd == B14_I2C_ADDR) {
         if (sensor_version == 0)
             g_zcl_basicAttrs.hwVersion = 14;
         else if (sensor_version == 1)
             g_zcl_basicAttrs.hwVersion = 20;
-    } else if (lcd_version == 1) {
+    } else if (i2c_address_lcd == B16_I2C_ADDR) {
         if (sensor_version == 0)
             g_zcl_basicAttrs.hwVersion = 15;
         else if (sensor_version == 1)
             g_zcl_basicAttrs.hwVersion = 16;
-    } else if (lcd_version == 2) {
+    } else if (i2c_address_lcd == B19_I2C_ADDR) {
         g_zcl_basicAttrs.hwVersion = 19;
     }
 }
@@ -373,16 +367,17 @@ void user_init(bool isRetention)
 	drv_pm_wakeupPinConfig(g_sensorPmCfg, sizeof(g_sensorPmCfg)/sizeof(drv_pm_pinCfg_t));
 #endif
 
-	init_i2c();
+//	init_i2c();
 	if(!isRetention){
-	    /* Populate properties with compiled-in values */
+
+		/* Populate properties with compiled-in values */
 		populate_sw_build();
 		populate_date_code();
 
 		/* Initialize Stack */
 		stack_init();
 
-		init_lcd(true);
+		init_lcd();
 		init_sensor();
 
 		populate_hw_version();
@@ -450,6 +445,8 @@ void user_init(bool isRetention)
 	}else{
 		/* Re-config phy when system recovery from deep sleep with retention */
 		mac_phyReconfig();
-		init_lcd_deepsleep();
+#if (!SENSOR_USE_TIMER)
+		read_sensor_and_save();
+#endif
 	}
 }

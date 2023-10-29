@@ -15,7 +15,7 @@ import io
 
 __progname__ = "TLSR825x MemInfo"
 __filename__ = "TlsrMemInfo"
-__version__ = "27.10.23"
+__version__ = "29.10.23"
 
 SRAM_BASE_ADDR = 0x840000
 
@@ -97,13 +97,13 @@ def main():
 	args = parser.parse_args()
 
 	print('%s version %s' % (__progname__, __version__))
-	#            0                  1                2                     3                  4                   5                   6                  7               8                9				  10			 11
-	sec_name = ["ramcode",          "text",          "rodata",           "rtdata", 		    "nc", 				"ictag",           "icdata",          "data",          "bss",          "irq_stk",	 	"stack",	     "flash"]
-	sec_des = ["Resident Code SRAM","Code Flash","Read Only Data Flash","Retention SRAM","Wasteful Area SRAM","Cache Table SRAM","Cache Data SRAM","Init Data SRAM","BSS Data SRAM","BSS Data SRAM","CPU Stack SRAM","Bin Size Flash"]
-	sec_start = [b"__start",    b"_rstored_",      b"_start_rodata_",  b"_retention_data_start_",b"_rstored_",       b"_ictag_start_",   b"_ictag_end_", b"_start_data_", b"_start_bss_",  b"_start_bss_",  b"_end_bss_",	 b"__start"]
-	sec_end   = [b"_rstored_",   b"_code_size_",  b"_end_rodata_", b"_retention_data_end_",  b"_ictag_start_",    b"_ictag_end_",  b"_ictag_end_",  b"_end_data_",   b"_end_bss_",  b"IRQ_STK_SIZE", b"__RAM_SIZE_MAX", b"_bin_size_"]
-	sec_start_add = [0, 0, 0, 0, SRAM_BASE_ADDR, 0, 0, 0, 0, 0, 0, 0]
-	sec_end_add =   [0, 0, 0, 0, 0, 0, 0x800, 0, 0, 0, SRAM_BASE_ADDR, 0]
+	#            0                  1                2                     3                  4                   5                   6                  7               8                9				  10			 11			12         
+	sec_name = ["ramcode",          "text",          "rodata",           "cusdata", 		    "nc", 				"ictag",           "icdata",          "data",          "bss",     "irq_stk",	"cbss", 	"stack",	     "flash"]
+	sec_des = ["Resident Code SRAM","Code Flash","Read Only Data Flash","Custom SRAM","Wasteful Area SRAM","Cache Table SRAM","Cache Data SRAM","Init Data SRAM","BSS Data SRAM","BSS Data SRAM","Custom BSS Data SRAM","CPU Stack SRAM","Bin Size Flash"]
+	sec_start = [b"__start",    b"_rstored_",      b"_start_rodata_",  b"_start_custom_data_",b"_rstored_",       b"_ictag_start_",   b"_ictag_end_", b"_start_data_", b"_start_bss_",  b"_start_bss_", b"_start_custom_bss_", b"_end_custom_bss_",	 b"__start"]
+	sec_end   = [b"_rstored_",   b"_code_size_",  b"_end_rodata_", b"_end_custom_data_",  b"_ictag_start_",    b"_ictag_end_",  b"_ictag_end_",  b"_end_data_",   b"_end_bss_",  b"IRQ_STK_SIZE", b"_end_custom_bss_", b"__RAM_SIZE_MAX", b"_bin_size_"]
+	sec_start_add = [0, 0, 0, 0, SRAM_BASE_ADDR, 0, 0, 0, 0, 0, 0, 0, 0]
+	sec_end_add =   [0, 0, 0, 0, 0, 0, 0x800, 0, 0, 0, 0, SRAM_BASE_ADDR, 0]
 	sec_size = []
 
 	e = ELFFile(args.elffname, args.tools);
@@ -111,7 +111,7 @@ def main():
 		chip_sram_size = e.get_symbol_addr(b"__RAM_SIZE_MAX");
 	else:
 		chip_sram_size = args.size;
-		sec_end_add[10] = SRAM_BASE_ADDR + chip_sram_size;
+		sec_end_add[11] = SRAM_BASE_ADDR + chip_sram_size;
 	if e.get_symbol_addr(b"_start_bss_"):
 		sec_end_add[9] = e.get_symbol_addr(b"_start_bss_")
 	load_sram = e.get_symbol_addr(b"_icload_size_div_16_") << 4;
@@ -132,8 +132,8 @@ def main():
 	ram_used =  e.get_symbol_addr(b"_end_bss_") - SRAM_BASE_ADDR
 	print("{0} : {1:d} {2}{3:X}{4}".format("Start Load SRAM", load_sram, "(ICtag: 0x", ictag,")"))
 	print("{0} : {1:d} {2} {3}".format("Total Used SRAM", ram_used, "from", chip_sram_size))
-	print("{0} : {1:d}{2}{3}{4}{5}".format("Total Free SRAM", sec_size[4], " + stack[", sec_size[10], '] = ',  sec_size[4] + sec_size[10]))
-	if sec_size[10] < 256:
+	print("{0} : {1:d}{2}{3}{4}{5}".format("Total Free SRAM", sec_size[4], " + stack[", sec_size[11], '] = ',  sec_size[4] + sec_size[11]))
+	if sec_size[11] < 256:
 		print("Warning! Stack is low!")
 	sys.exit(0);
 	

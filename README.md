@@ -6,6 +6,10 @@ This repository forked from [devbis/z03mmc](https://github.com/devbis/z03mmc) (!
 
 1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность ипорта 'Existing Project' в "Telink IoT Studio".
 
+2. Малая оптимизация по потреблению - среднее потребление 19 мкА для Xiaomi LYWSD03MMC B1.4, при опросе 10 сек. 
+
+![image](https://github.com/devbis/z03mmc/assets/12629515/1d0fb2aa-2bc0-41ef-9915-1a70daff3bff)
+
 Для сборки под Linux требуется выполнить:
 
 ```
@@ -16,7 +20,6 @@ make
 
 Out log:
 ```
-Warning: Undefined symbol 'mac_public'!
 Warning: Undefined symbol 'ss_apsmeSwitchKeyReq'!
 Warning: Undefined symbol 'ss_apsmeTransportKeyReq'!
 Warning: Undefined symbol 'tl_zbNwkBeaconPayloadUpdate'!
@@ -24,28 +27,29 @@ Warning: Undefined symbol 'tl_zbNwkBeaconPayloadUpdate'!
  Section|          Description| Start (hex)|   End (hex)|Used space
 -------------------------------------------------------------------
  ramcode|   Resident Code SRAM|           0|        1510|    5392
-    text|           Code Flash|        1510|       1F710|  123392
+    text|           Code Flash|        1510|       1F2D4|  122308
   rodata| Read Only Data Flash|           0|           0|       0
-  rtdata|       Retention SRAM|           0|           0|       0
+ cusdata|          Custom SRAM|      8452E0|      8452E0|       0
       nc|   Wasteful Area SRAM|      841510|      841600|     240
    ictag|     Cache Table SRAM|      841600|      841700|     256
   icdata|      Cache Data SRAM|      841700|      841F00|    2048
-    data|       Init Data SRAM|      841F00|      8420E4|     484
-     bss|        BSS Data SRAM|      8420F0|      8452E4|   12788
- irq_stk|        BSS Data SRAM|      8420F0|      8422F0|     512
-   stack|       CPU Stack SRAM|      8452E4|      850000|   44316
-   flash|       Bin Size Flash|           0|       1F8F4|  129268
+    data|       Init Data SRAM|      841F00|      8420C8|     456
+     bss|        BSS Data SRAM|      8420D0|      8452E0|   12816
+ irq_stk|        BSS Data SRAM|      8420D0|      8422D0|     512
+    cbss| Custom BSS Data SRAM|      8452E0|      8452E0|       0
+   stack|       CPU Stack SRAM|      8452E0|      850000|   44320
+   flash|       Bin Size Flash|           0|       1F49C|  128156
 -------------------------------------------------------------------
 Start Load SRAM : 0 (ICtag: 0x0)
-Total Used SRAM : 21220 from 65536
-Total Free SRAM : 240 + stack[44316] = 44556
+Total Used SRAM : 21216 from 65536
+Total Free SRAM : 240 + stack[44320] = 44560
 ```
 
 Под Window, после импорта в ‘Telink IoT Studio’, выполнить “make install” или в папке проекта:
 ```
 git clone https://github.com/devbis/tl_zigbee_sdk.git -b 3.6.8.5 --depth 1 ./SDK
 ```
-И включить многопоточную сборку для сборки всего проекта с нуля за 2 сек.
+И включить многопоточную сборку для сборки всего проекта с нуля за 2..3 сек (make -j).
 
 
 ---

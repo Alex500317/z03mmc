@@ -7,9 +7,40 @@
 #include "lcd.h"
 #include "device.h"
 
+#if 1
 #define pm_wait_ms(t) cpu_stall_wakeup_by_timer0(t*CLOCK_16M_SYS_TIMER_CLK_1MS);
+#define pm_wait_us(t) cpu_stall_wakeup_by_timer0(t*CLOCK_16M_SYS_TIMER_CLK_1US);
+#else
+#define pm_wait_ms(t) sleep_us((t)*1000);
+#define pm_wait_us(t) sleep_us(t);
+#endif
 
+// UART 38400 BAUD
 #define LCD_UART_BAUD 38400
+#if CLOCK_SYS_CLOCK_HZ == 16000000
+#define uartCLKdiv 51 // 16000000/(7+1)/(51+1)=38461.538...
+#define bwpc 7
+#elif CLOCK_SYS_CLOCK_HZ == 24000000
+#define uartCLKdiv 124 // 24000000/(4+1)/(124+1)=38400
+#define bwpc 4
+#elif CLOCK_SYS_CLOCK_HZ == 32000000
+#define uartCLKdiv 103 // 32000000/(7+1)/(103+1)=38461.538...
+#define bwpc 7
+#elif CLOCK_SYS_CLOCK_HZ == 48000000
+#define uartCLKdiv 124 // 48000000/(9+1)/(124+1)=38400
+#define bwpc 9
+#else
+#error "Set UART CLK!"
+#endif
+
+typedef struct __attribute__((packed)) _dma_uart_buf_t {
+	volatile u32 dma_len;
+	u32 head;
+	u8 start;
+	u8 data[6];
+	u8 chk;
+	u8 end;
+} dma_uart_buf_t;
 
 /*
  *  LYWSD03MMC LCD buffer:  byte.bit
@@ -35,9 +66,16 @@
                                         --1.7--         --0.7--
                            BAT 1.3
 */
+_attribute_data_retention_ u8 display_buff[6];
+_attribute_data_retention_ u8 display_cmp_buff[6];
+_attribute_data_retention_ u8 i2c_address_lcd; // = 0x78; // B1.4 uses Address 0x78 and B1.9 uses 0x7c
+dma_uart_buf_t utxb;
 
-const u8 lcd_3C_init_cmd[] = {0x80,0x3B,0x80,0x02,0x80,0x0F,0x80,0x95,0x80,0x88,0x80,0x88,0x80,0x88,0x80,0x88,0x80,0x19,0x80,0x28,0x80,0xE3,0x80,0x11};
-const u8 lcd_3E_init_cmd[] = {
+const u8 lcd_init_cmd_b14[] =	{0x80,0x3B,0x80,0x02,0x80,0x0F,0x80,0x95,0x80,0x88,0x80,0x88,0x80,0x88,0x80,0x88,0x80,0x19,0x80,0x28,0x80,0xE3,0x80,0x11};
+								//	{0x80,0x40,0xC0,byte1,0xC0,byte2,0xC0,byte3,0xC0,byte4,0xC0,byte5,0xC0,byte6};
+const u8 lcd_init_clr_b14[] =	{0x80,0x40,0xC0,0,0xC0,0,0xC0,0,0xC0,0,0xC0,0,0xC0,0,0xC0,0,0xC0,0};
+
+const u8 lcd_init_b19[]	=	{
 		0xea, // Set IC Operation(ICSET): Software Reset, Internal oscillator circuit
 		0xa4, // Display control (DISCTL): Normal mode, FRAME flip, Power save mode 1
 //		0x9c, // Address set (ADSET): 0x1C ?
@@ -55,76 +93,70 @@ const u8 lcd_3E_init_cmd[] = {
 		0x00,0x00
 };
 
-_attribute_data_retention_ u8 display_buff[6];
+
 const u8 display_numbers[16] = {0xF5,0x05,0xD3,0x97,0x27,0xb6,0xf6,0x15,0xf7,0xb7,0x77,0xe6,0xf0,0xc7,0xf2,0x72};
 
-_attribute_data_retention_ u8 lcd_version;
-_attribute_data_retention_ u8 i2c_address_lcd = 0x78; // B1.4 uses Address 0x78 and B1.9 uses 0x7c
+#define lcd_send_i2c_buf(b, a)  send_i2c(i2c_address_lcd, (u8 *) b, a)
 
-
-void init_lcd(bool clear){
-
-	if(test_i2c_device(0x3C)){// B1.4
-		lcd_version = 0;
-		i2c_address_lcd = 0x78;
-	}else if(test_i2c_device(0x3E)){// B1.9
-		lcd_version = 2;
-		i2c_address_lcd = 0x7C;
-	}else{// B1.6 uses UART and is not testable this way
-    	// UART 38400 BAUD
-		lcd_version = 1;
+void init_lcd(void){
+	i2c_address_lcd = (u8) test_i2c_device(B14_I2C_ADDR << 1);
+	if (i2c_address_lcd) { // B1.4, B1.7, B2.0
+// 		GPIO_PB6 set in app_config.h!
+		gpio_setup_up_down_resistor(GPIO_PB6, PM_PIN_PULLUP_10K); // LCD on low temp needs this, its an unknown pin going to the LCD controller chip
+		pm_wait_ms(50);
+		lcd_send_i2c_buf((u8 *) lcd_init_cmd_b14, sizeof(lcd_init_cmd_b14));
+		lcd_send_i2c_buf((u8 *) lcd_init_clr_b14, sizeof(lcd_init_clr_b14));
+	} else {
+		i2c_address_lcd = (u8) test_i2c_device(B19_I2C_ADDR << 1);
+		if (i2c_address_lcd) { // B1.9
+			lcd_send_i2c_buf((u8 *) lcd_init_b19, sizeof(lcd_init_b19));
+			lcd_send_i2c_buf((u8 *) lcd_init_b19, sizeof(lcd_init_b19));
+		}
+		// else B1.5, B1.6 uses UART (i2c_address_lcd = 0)
 	}
-
-	if(lcd_version == 0){// B1.4 Hardware
-		gpio_set_func(GPIO_PB6, AS_GPIO);//LCD on low temp needs this, its an unknown pin going to the LCD controller chip
-		gpio_set_output_en(GPIO_PB6, 0);
-		gpio_set_input_en(GPIO_PB6, 1);
-		gpio_setup_up_down_resistor(GPIO_PB6, PM_PIN_PULLUP_10K);
-		sleep_us(50000);
-		send_i2c(i2c_address_lcd, lcd_3C_init_cmd, sizeof(lcd_3C_init_cmd));
-
-	}else if(lcd_version == 1){// B1.6 Hardware
-
-		init_lcd_deepsleep();
-
-	}else if(lcd_version == 2){// B1.9 Hardware
-
-		send_i2c(i2c_address_lcd,lcd_3E_init_cmd, sizeof(lcd_3E_init_cmd));
-		send_i2c(i2c_address_lcd,lcd_3E_init_cmd, sizeof(lcd_3E_init_cmd));
-		return;
-	}
-	if (clear)
-		send_to_lcd_long(0x00,0x00,0x00,0x00,0x00,0x00);
 }
 
-void init_lcd_deepsleep(){
-    if(lcd_version == 0){// B1.4 Hardware
-		gpio_set_func(GPIO_PB6, AS_GPIO);//LCD on low temp needs this, its an unknown pin going to the LCD controller chip
-		gpio_set_output_en(GPIO_PB6, 0);
-		gpio_set_input_en(GPIO_PB6, 1);
-		gpio_setup_up_down_resistor(GPIO_PB6, PM_PIN_PULLUP_10K);
-    }
-	else if(lcd_version == 1) {
-		drv_uart_pin_set(UART_TX_PD7, UART_RX_PB0);
-		uart_reset();
-		uart_init_baudrate(LCD_UART_BAUD, UART_CLOCK_SOURCE, PARITY_NONE, STOP_BIT_ONE);
-		uart_dma_enable(0, 0);
-		dma_chn_irq_enable(0, 0);
-		uart_irq_enable(0,0);
-		uart_ndma_irq_triglevel(0,0);
-	}
+/* B1.5, B1.6 (UART LCD)
+  u8 * p = display_buff; */
+static void lcd_send_uart(u8 *p){
+	utxb.start = 0xAA;
+	utxb.data[5] = *p++;
+	utxb.data[4] = *p++;
+	utxb.data[3] = *p++;
+	utxb.data[2] = *p++;
+	utxb.data[1] = *p++;
+	utxb.data[0] = *p;
+	utxb.chk = utxb.data[0]^utxb.data[1]^utxb.data[2]^utxb.data[3]^utxb.data[4]^utxb.data[5];
+	utxb.end = 0x55;
+	utxb.dma_len = sizeof(utxb) - sizeof(utxb.dma_len);
+	// init uart
+	reg_clk_en0 |= FLD_CLK0_UART_EN;
+	///reg_clk_en1 |= FLD_CLK1_DMA_EN;
+	uart_reset();
+	// reg_uart_clk_div/reg_uart_ctrl0
+	REG_ADDR32(0x094) = MASK_VAL(FLD_UART_CLK_DIV, uartCLKdiv, FLD_UART_CLK_DIV_EN, 1)
+		|	((MASK_VAL(FLD_UART_BPWC, bwpc)	| (FLD_UART_TX_DMA_EN)) << 16) // set bit width, enable UART DMA mode
+			| ((MASK_VAL(FLD_UART_CTRL1_STOP_BIT, 0)) << 24) // 00: 1 bit, 01: 1.5bit 1x: 2bits;
+		;
+	// reg_dma1_addr/reg_dma1_ctrl
+	REG_ADDR32(0xC04) = (unsigned short)((u32)(&utxb)) //set tx buffer address
+		| 	(((sizeof(utxb)+15)>>4) << 16); //set tx buffer size
+	///reg_dma1_addrHi = 0x04; (in sdk init?)
+	reg_dma_chn_en |= FLD_DMA_CHN_UART_TX;
+	///reg_dma_chn_irq_msk |= FLD_DMA_IRQ_UART_TX;
 
-}
-
-void uart_send_lcd(u8 byte1, u8 byte2, u8 byte3, u8 byte4, u8 byte5, u8 byte6){
-	u8 trans_buff[13] = {0x00,0x00,0x00,0x00,0xAA,byte6,byte5,byte4,byte3,byte2,byte1,(byte1 ^byte2 ^byte3 ^byte4 ^byte5 ^byte6),0x55};
-	for(unsigned char i=0;i<13;i++){
-		uart_ndma_send_byte(trans_buff[i]);
-	}
-	while(uart_tx_is_busy())
-	{
-		sleep_us(10);
-	};
+	// GPIO_PD7 set TX UART pin
+	REG_ADDR8(0x5AF) = (REG_ADDR8(0x5AF) &  (~(BIT(7)|BIT(6)))) | BIT(7);
+	BM_CLR(reg_gpio_func(UART_TX_PD7), UART_TX_PD7 & 0xff);
+	/// gpio_set_input_en(UART_TX_PD7, 1); ???
+	// start send DMA
+	reg_dma_tx_rdy0 |= FLD_DMA_CHN_UART_TX; // start tx
+	// wait send (3.35 ms), sleep?
+	pm_wait_us(3330); // 13 bytes * 10 bits / 38400 baud = 0.0033854 sec = 3.4 ms power ~3 mA
+	//while (reg_dma_tx_rdy0 & FLD_DMA_CHN_UART_TX); ?
+	while (!(reg_uart_status1 & FLD_UART_TX_DONE));
+	// set low/off power UART
+	reg_uart_clk_div = 0;
 }
 
 u8 reverse(u8 revByte) {
@@ -134,32 +166,73 @@ u8 reverse(u8 revByte) {
    return revByte;
 }
 
-void send_to_lcd_long(u8 byte1, u8 byte2, u8 byte3, u8 byte4, u8 byte5, u8 byte6){
-    if(lcd_version == 0){// B1.4 Hardware
-        u8 lcd_set_segments[] =    {0x80,0x40,0xC0,byte1,0xC0,byte2,0xC0,byte3,0xC0,byte4,0xC0,byte5,0xC0,byte6,0xC0,0x00,0xC0,0x00};
-        send_i2c(i2c_address_lcd,lcd_set_segments, sizeof(lcd_set_segments));
-    }else if(lcd_version == 1){// B1.6 Hardware
-        uart_send_lcd(byte1,byte2,byte3,byte4,byte5,byte6);
-    }else if(lcd_version == 2){// B1.9 Hardware
-        u8 lcd_set_segments[] =    {0x04,reverse(byte1),reverse(byte2),0x00,0x00,reverse(byte3),reverse(byte4),0x00,0x00,reverse(byte5),reverse(byte6), 0xc8};
-        send_i2c(i2c_address_lcd,lcd_set_segments, sizeof(lcd_set_segments));
-    }
+
+void send_to_lcd(void) {
+	u8 *p = display_buff;
+	unsigned int buff_index;
+	unsigned char r = irq_disable();
+	if (i2c_address_lcd) {
+		if ((reg_clk_en0 & FLD_CLK0_I2C_EN)==0)
+			init_i2c();
+		else {
+			gpio_setup_up_down_resistor(I2C_SCL, PM_PIN_PULLUP_10K);
+			gpio_setup_up_down_resistor(I2C_SDA, PM_PIN_PULLUP_10K);
+		}
+		if (i2c_address_lcd == (B14_I2C_ADDR << 1)) {
+			// B1.4, B1.7, B2.0
+			reg_i2c_id = i2c_address_lcd;
+			reg_i2c_adr_dat = 0x4080;
+			reg_i2c_ctrl = FLD_I2C_CMD_START | FLD_I2C_CMD_ID | FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO;
+			while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			reg_i2c_adr = 0xC0;
+			for(buff_index = 0; buff_index < sizeof(display_buff); buff_index++) {
+				reg_i2c_do = *p++;
+				reg_i2c_ctrl = FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO;
+				while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			}
+			reg_i2c_ctrl = FLD_I2C_CMD_STOP;
+		} else { // (i2c_address_lcd == (B19_I2C_ADDR << 1))
+			// B1.9 BU9792AFUV
+			for(buff_index = 0; buff_index < sizeof(display_buff); buff_index++)
+				utxb.data[buff_index] = reverse(*p++);
+			p = utxb.data;
+			reg_i2c_id = i2c_address_lcd;
+			reg_i2c_adr = 0x04;	// addr: 4
+			reg_i2c_do = *p++;
+			reg_i2c_di = *p++;
+			reg_i2c_ctrl = FLD_I2C_CMD_ID | FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO | FLD_I2C_CMD_DI | FLD_I2C_CMD_START;
+			while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			reg_i2c_adr_dat = 0;
+			reg_i2c_ctrl = FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO;
+			while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			reg_i2c_adr = *p++;
+			reg_i2c_do = *p++;
+			reg_i2c_ctrl = FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO;
+			while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			reg_i2c_adr_dat = 0;
+			reg_i2c_ctrl = FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO;
+			while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			reg_i2c_adr = *p++;
+			reg_i2c_do = *p;
+			reg_i2c_ctrl = FLD_I2C_CMD_ADDR | FLD_I2C_CMD_DO | FLD_I2C_CMD_STOP;
+			while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+			// LCD cmd: 0xc8 - Mode Set (MODE SET): Display ON, 1/3 Bias
+			reg_i2c_adr = 0xC8;
+			reg_i2c_ctrl = FLD_I2C_CMD_START | FLD_I2C_CMD_ID | FLD_I2C_CMD_ADDR | FLD_I2C_CMD_STOP;
+		}
+		while (reg_i2c_status & FLD_I2C_CMD_BUSY);
+	} else {
+		// B1.5, B1.6 (UART LCD)
+		lcd_send_uart(p);
+	}
+	irq_restore(r);
 }
 
-void send_to_lcd(u8 byte1, u8 byte2, u8 byte3, u8 byte4, u8 byte5, u8 byte6){
-    if(lcd_version == 0){// B1.4 Hardware
-        u8 lcd_set_segments[] =    {0x80,0x40,0xC0,byte1,0xC0,byte2,0xC0,byte3,0xC0,byte4,0xC0,byte5,0xC0,byte6};
-        send_i2c(i2c_address_lcd,lcd_set_segments, sizeof(lcd_set_segments));
-    }else if(lcd_version == 1){// B1.6 Hardware
-        uart_send_lcd(byte1,byte2,byte3,byte4,byte5,byte6);
-    }else if(lcd_version == 2){// B1.9 Hardware
-        u8 lcd_set_segments[] =    {0x04,reverse(byte1),reverse(byte2),0x00,0x00,reverse(byte3),reverse(byte4),0x00,0x00,reverse(byte5),reverse(byte6), 0xc8};
-        send_i2c(i2c_address_lcd,lcd_set_segments, sizeof(lcd_set_segments));
-    }
-}
-
-void update_lcd(){
-	send_to_lcd(display_buff[0],display_buff[1],display_buff[2],display_buff[3],display_buff[4],display_buff[5]);
+void update_lcd(void){
+	if (memcmp(display_cmp_buff, display_buff, sizeof(display_buff))) {
+		send_to_lcd();
+		memcpy(display_cmp_buff, display_buff, sizeof(display_buff));
+	}
 }
 
 void show_number(u8 position,u8 number){
@@ -191,33 +264,6 @@ void show_smiley(u8 state){/*0=off, 1=happy, 2=sad*/
 	display_buff[2] &= ~0x07;
 	if(state==1)display_buff[2]|=0x05;
 	else if(state==2)display_buff[2]|=0x06;
-}
-
-
-void show_zigbe(){
-	send_to_lcd(0xf2,0xe6,0x05,0xf4,0x05,0xd1);
-}
-
-void show_atc(){
-	send_to_lcd(0x00,0x00,0x05,0xc2,0xe2,0x77);
-}
-
-void show_sto(){
-	send_to_lcd(0x00,0x00,0x00,0xc6,0xe2,0xb6);
-}
-
-void show_atc_mac(){
-	extern u8  mac_public[6];
-	send_to_lcd(display_numbers[mac_public[2] &0x0f],display_numbers[mac_public[2]>>4],0x05,0xc2,0xe2,0x77);
-	pm_wait_ms(1800);
-	send_to_lcd(0x00,0x00,0x05,0xc2,0xe2,0x77);
-	pm_wait_ms(200);
-	send_to_lcd(display_numbers[mac_public[1] &0x0f],display_numbers[mac_public[1]>>4],0x05,0xc2,0xe2,0x77);
-	pm_wait_ms(1800);
-	send_to_lcd(0x00,0x00,0x05,0xc2,0xe2,0x77);
-	pm_wait_ms(200);
-	send_to_lcd(display_numbers[mac_public[0] &0x0f],display_numbers[mac_public[0]>>4],0x05,0xc2,0xe2,0x77);
-	pm_wait_ms(1800);
 }
 
 void show_big_number(int16_t number, bool point){

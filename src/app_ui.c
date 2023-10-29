@@ -32,7 +32,7 @@
 #include "device.h"
 #include "app_ui.h"
 
-#include "shtv3_sensor.h"
+#include "sensor.h"
 #include "lcd.h"
 
 /**********************************************************************
