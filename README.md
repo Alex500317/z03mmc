@@ -2,15 +2,20 @@
 
 This repository forked from [devbis/z03mmc](https://github.com/devbis/z03mmc) (!)
 
-Текущие дополнения:
+Актуальную версию смотрите в [devbis/z03mmc](https://github.com/devbis/z03mmc)!
 
-1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность ипорта 'Existing Project' в "Telink IoT Studio".
+Текущие тесты-задачи-дополнения:
+
+1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность импорта 'Existing Project' в "Telink IoT Studio".
 
 2. Малая оптимизация по потреблению - среднее потребление 19 мкА для Xiaomi LYWSD03MMC B1.4, при опросе 10 сек. 
 
 ![image](https://github.com/devbis/z03mmc/assets/12629515/1d0fb2aa-2bc0-41ef-9915-1a70daff3bff)
 
-Для сборки под Linux требуется выполнить:
+3. Требуется разбор SDK для встраивания функции опроса датчика в событие обновления передачи.
+
+
+Для сборки под Linux выполнить:
 
 ```
 git clone https://github.com/pvvx/z03mmc
@@ -49,7 +54,7 @@ Total Free SRAM : 240 + stack[44320] = 44560
 ```
 git clone https://github.com/devbis/tl_zigbee_sdk.git -b 3.6.8.5 --depth 1 ./SDK
 ```
-И включить многопоточную сборку для сборки всего проекта с нуля за 2..3 сек (make -j).
+И включить многопоточную сборку для сборки всего проекта с нуля за 2..3 сек (make -j -> 3 сек на 12-ти ядрах/24 потока).
 
 
 ---
