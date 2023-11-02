@@ -18,8 +18,7 @@
 #include "lcd.h"
 #include "reporting.h"
 
-#define SENSOR_USE_TIMER	0
-
+#define SENSOR_USE_TIMER 1
 /**********************************************************************
  * LOCAL CONSTANTS
  */
@@ -169,7 +168,10 @@ void user_app_init(void)
 //	show_zigbe();
 
     // read sensor every 10 seconds
-    // read_sensor_start(10000);
+#if (SENSOR_USE_TIMER)
+//		read_sensor_and_save();
+	    read_sensor_start(10000);
+#endif
 }
 
 _attribute_ram_code_
@@ -204,7 +206,7 @@ void read_sensor_and_save() {
     update_lcd();
 }
 
-#if SENSOR_USE_TIMER
+#if (SENSOR_USE_TIMER)
 s32 zclSensorTimerCb(void *arg)
 {
 	u32 interval = g_sensorAppCtx.readSensorTime;
@@ -224,7 +226,6 @@ void read_sensor_start(u16 delayTime)
 		g_sensorAppCtx.timerReadSensorEvt = TL_ZB_TIMER_SCHEDULE(zclSensorTimerCb, NULL, interval);
 	}
 }
-
 #endif
 
 void ind_init(void)
@@ -268,7 +269,7 @@ void app_task(void)
 static void sensorDeviceSysException(void)
 {
 #if 1
-	SYSTEM_RESET();
+	zb_resetDevice();
 #else
 	light_on();
 	while(1);
@@ -369,8 +370,7 @@ void user_init(bool isRetention)
 
 //	init_i2c();
 	if(!isRetention){
-
-		/* Populate properties with compiled-in values */
+	    /* Populate properties with compiled-in values */
 		populate_sw_build();
 		populate_date_code();
 
@@ -449,4 +449,5 @@ void user_init(bool isRetention)
 		read_sensor_and_save();
 #endif
 	}
+
 }

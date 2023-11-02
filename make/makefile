@@ -7,7 +7,7 @@ LIBS := -ldrivers_8258 -lzb_ed
 
 #All libs: -ldrivers_826x -ldrivers_8258 -ldrivers_8278 -lsoft-fp -lfirmware_encrypt -lzb_coordinator -lzb_ed -lzb_router
 
-PGM_PORT?=COM11
+PGM_PORT?=COM4
 
 PROJECT_PATH ?= .
 SRC_DIR ?= /src
@@ -19,7 +19,7 @@ SDK_PATH ?= ./SDK
 # MAKE_PATH: project all make
 MAKE_PATH ?= ./make
 
-LS_FLAGS := $(SDK_PATH)/platform/boot/8258/boot_8258.link
+LS_FLAGS := ./boot.link
 
 OUT_PATH ?=./out
 
@@ -123,7 +123,7 @@ ELF_FILE := $(OUT_PATH)/$(PROJECT_NAME).elf
 SIZEDUMMY := sizedummy
 
 # All Target
-all: clean pre-build main-build
+all: pre-build main-build
 
 # Main-build Target
 main-build: $(ELF_FILE) secondary-outputs
@@ -172,10 +172,17 @@ secondary-outputs: $(BIN_FILE) $(LST_FILE) $(SIZEDUMMY)
 
 
 flash: $(BIN_FILE)
-	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -t50 -a2750 -m -w we 0 $(BIN_FILE)
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 we 0 $(BIN_FILE)
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -w -m i
 
 reset:
-	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -t50 -a2750 -m -w i
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 -m -w i
+
+erase:
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 -s ea
+
+info:
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 i
 
 stop:
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -t50 -a2750 i
@@ -183,7 +190,7 @@ stop:
 go:
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -w -m
 
-TADDR?=0x844000
+TADDR?=0x08425e0
 TLEN?=128
 test_damp:
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z10 -c -g ds $(TADDR) $(TLEN)
@@ -193,13 +200,17 @@ install: $(LS_FLAGS) $(TC32_PATH)$(TST_FILE)
 	@echo "SDK & TC32 installed. Use: make all"
 
 $(LS_FLAGS): $(SDK_PATH)
+ifneq ($(LS_FLAGS), $(wildcard $(LS_FLAGS)))
 	git clone https://github.com/devbis/tl_zigbee_sdk.git -b 3.6.8.5 --depth 1 $(SDK_PATH)
+endif
 
 $(SDK_PATH):
 	mkdir -p $(SDK_PATH)
 
 $(TC32_PATH)$(TST_FILE): $(TOOLS_PATH)
+ifneq ($(TC32_PATH)$(TST_FILE), $(wildcard $(TC32_PATH)$(TST_FILE)))
 	git clone https://github.com/devbis/tc32.git -b $(CUR_OS) $(TOOLS_PATH)/tc32
+endif
 
 $(TOOLS_PATH):
 	mkdir -p $(TOOLS_PATH)

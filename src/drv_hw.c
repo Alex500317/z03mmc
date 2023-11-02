@@ -225,7 +225,7 @@ startup_state_e drv_platform_init(void)
 #if VOLTAGE_DETECT_ENABLE
 	voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
 
-	voltage_detect((state == SYSTEM_BOOT) ? 1 : 0);
+	voltage_detect(0);
 #endif
 
 	/* RF */
