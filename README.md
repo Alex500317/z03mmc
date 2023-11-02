@@ -8,9 +8,19 @@ This repository forked from [devbis/z03mmc](https://github.com/devbis/z03mmc) (!
 
 1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность импорта 'Existing Project' в "Telink IoT Studio".
 
-2. Малая оптимизация по потреблению - среднее потребление 54 мкА для Xiaomi LYWSD03MMC B1.4, при опросе 10 сек (bind claster 0x0402, 0x0405). 
+2. Среднее потребление (+3.3V LYWSD03MMC B1.4) после “bind”, но без привязки кластеров - 20..22 мкА:
 
-![image](https://github.com/devbis/z03mmc/assets/12629515/1d0fb2aa-2bc0-41ef-9915-1a70daff3bff)
+
+ ![bind_nc.png](https://github.com/pvvx/z03mmc/blob/master/img/bind_nc.png)
+
+ Обновления экрана и опрос эфира идут каждые 10 секунд.
+
+ Среднее потребление при “bind” с привязкой кластеров 0x402, 0x405 – 54..58  мкА:
+
+ ![bind_nc.png](https://github.com/pvvx/z03mmc/blob/master/img/bind_402_405.png)
+
+ Обновления экрана и передача замеров идут каждые 10 секунд.
+
 
 3. Требуется разбор SDK для встраивания функции опроса датчика в событие обновления передачи "report".
 
