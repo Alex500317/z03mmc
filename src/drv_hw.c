@@ -63,6 +63,7 @@ u32 sysTimerPerUs;
 static void randInit(void)
 {
 #if defined(MCU_CORE_8258) || defined(MCU_CORE_8278)
+	drv_adc_enable(1);
 	random_generator_init();
 #elif defined(MCU_CORE_B91)
 	trng_init();
@@ -113,7 +114,7 @@ static void internalFlashSizeCheck(void){
 }
 
 
-static void voltage_detect_init(u32 detectPin)
+void voltage_detect_init(u32 detectPin)
 {
 	drv_adc_init();
 
@@ -126,11 +127,11 @@ static void voltage_detect_init(u32 detectPin)
 	drv_adc_mode_pin_set(DRV_ADC_BASE_MODE, (adc_input_pin_def_e)detectPin);
 #endif
 
-	drv_adc_enable(1);
+//	drv_adc_enable(1);
 }
 
 
-#if VOLTAGE_DETECT_ENABLE
+#if 1 //VOLTAGE_DETECT_ENABLE
 void voltage_detect(bool powerOn)
 {
 	u16 voltage = drv_get_adc_data();
@@ -207,6 +208,10 @@ startup_state_e drv_platform_init(void)
 #endif
 
 	if(state != SYSTEM_DEEP_RETENTION){
+#if !VOLTAGE_DETECT_ENABLE
+		voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
+		voltage_detect(0);
+#endif
 		randInit();
 		internalFlashSizeCheck();
 #if PM_ENABLE
@@ -224,8 +229,11 @@ startup_state_e drv_platform_init(void)
 	/* ADC */
 #if VOLTAGE_DETECT_ENABLE
 	voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
-
-	voltage_detect(0);
+    static u32 tick = clock_time();
+	if(clock_time_exceed(tick, 500 * 1000)) { // 500 ms
+		voltage_detect(0);
+		tick = clock_time();
+	}
 #endif
 
 	/* RF */
@@ -234,9 +242,8 @@ startup_state_e drv_platform_init(void)
 
 #if defined(MCU_CORE_8258)
 	if(flash_is_zb()){
-
 #if (!VOLTAGE_DETECT_ENABLE) || !defined(VOLTAGE_DETECT_ENABLE)
-		voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
+//		voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
 		flash_safe_voltage_set(BATTERY_SAFETY_THRESHOLD);
 #endif
 		flash_unlock_mid13325e();  //add it for the flash which sr is expired

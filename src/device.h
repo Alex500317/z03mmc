@@ -24,8 +24,7 @@ typedef struct{
 
 	u16 ledOnTime;
 	u16 ledOffTime;
-	u32 readSensorTic; // = READ_SENSOR_TIMER (10000 ms)
-	u16 readSensorTime; // = READ_SENSOR_TIMER (10000 ms)
+	u32 readSensorTime; // read sensor timer
 	u8 	oriSta;		//original state before blink
 	u8 	sta;		//current state in blink
 	u8 	times;		//blink times

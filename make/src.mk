@@ -4,12 +4,12 @@ $(SRC_DIR)/custom_zcl \
 $(SRC_DIR)/common
 
 OBJS += \
+$(OUT_PATH)$(SRC_DIR)/adc.o \
 $(OUT_PATH)$(SRC_DIR)/app_i2c.o \
 $(OUT_PATH)$(SRC_DIR)/app_ui.o \
 $(OUT_PATH)$(SRC_DIR)/device.o \
 $(OUT_PATH)$(SRC_DIR)/lcd.o \
 $(OUT_PATH)$(SRC_DIR)/sensorEpCfg.o \
-$(OUT_PATH)$(SRC_DIR)/battery.o \
 $(OUT_PATH)$(SRC_DIR)/sensors.o \
 $(OUT_PATH)$(SRC_DIR)/zb_appCb.o \
 $(OUT_PATH)$(SRC_DIR)/custom_zcl/zcl_relative_humidity.o \

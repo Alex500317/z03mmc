@@ -6,7 +6,6 @@
 #include "app_i2c.h"
 #include "device.h"
 #include "sensor.h"
-#include "battery.h"
 
 #if 1
 #define pm_wait_ms(t) cpu_stall_wakeup_by_timer0(t*CLOCK_16M_SYS_TIMER_CLK_1MS);
@@ -194,15 +193,25 @@ int read_sensor_cb(void) {
 	return 0;
 }
 
+extern void voltage_detect_init(u32 detectPin);
+extern void voltage_detect(bool powerOn);
 
 void start_measure_sensor_deep_sleep(void) {
 	if (sensor_i2c_addr == (SHTC3_I2C_ADDR << 1)) {
 		send_sensor_word(SHTC3_WAKEUP); //	Wake-up command of the sensor
 		sleep_us(SHTC3_WAKEUP_us - 5);	// 240 us
 		send_sensor_word(SHTC3_MEASURE);
+#if !VOLTAGE_DETECT_ENABLE
+		voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
+		voltage_detect(0);
+#endif
 		pm_wait_us(SHTC3_MEASURE_us);
 	} else if (sensor_i2c_addr) {
 		send_sensor_byte(SHT4x_MEASURE_HI);
+#if !VOLTAGE_DETECT_ENABLE
+		voltage_detect_init(VOLTAGE_DETECT_ADC_PIN);
+		voltage_detect(0);
+#endif
 		pm_wait_us(SHT4x_MEASURE_HI_us);
 	} else
 		return;

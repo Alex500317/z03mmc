@@ -17,7 +17,7 @@
 #include "sensor.h"
 #include "lcd.h"
 #include "reporting.h"
-#include "battery.h"
+
 
 /**********************************************************************
  * LOCAL CONSTANTS
@@ -141,14 +141,17 @@ u8 is_comfort(s16 t, u16 h) {
 }
 
 void read_sensor_and_save() {
-
 	read_sensor();
 
 	g_zcl_temperatureAttrs.measuredValue = measured_data.temp;
     g_zcl_relHumidityAttrs.measuredValue = measured_data.humi;
 
     g_zcl_powerAttrs.batteryVoltage = (u8)(measured_data.battery_mv / 100);
-    g_zcl_powerAttrs.batteryPercentage = get_battery_level_in_zigbee_sepulkas(measured_data.battery_mv); // level in zigbee sepulkas
+    // batteryPercentage = level in zigbee sepulkas
+    u16 zigbee_sepulkas = (measured_data.battery_mv - BATTERY_SAFETY_THRESHOLD)/4;
+    if(zigbee_sepulkas > 200)
+    	zigbee_sepulkas = 200;
+    g_zcl_powerAttrs.batteryPercentage = zigbee_sepulkas;
 
     // update lcd
     show_temp_symbol(1);
@@ -161,13 +164,10 @@ void read_sensor_and_save() {
     );
 #endif
     update_lcd();
+
+    g_sensorAppCtx.readSensorTime = clock_time();
 }
 
-s32 zclSensorTimerCb(void *arg)
-{
-	read_sensor_and_save();
-	return g_sensorAppCtx.readSensorTime;
-}
 /*********************************************************************
  * @fn      user_app_init
  *
@@ -201,13 +201,10 @@ void user_app_init(void)
     ota_init(OTA_TYPE_CLIENT, (af_simple_descriptor_t *)&sensorDevice_simpleDesc, &sensorDevice_otaInfo, &sensorDevice_otaCb);
 #endif
 
-    // read sensor every 10 seconds
-//   	if(!g_sensorAppCtx.timerReadSensorEvt){
-   		read_sensor_and_save();
-   		g_sensorAppCtx.readSensorTime = READ_SENSOR_TIMER;
-   		g_sensorAppCtx.readSensorTic = clock_time();
-//   		g_sensorAppCtx.timerReadSensorEvt = TL_ZB_TIMER_SCHEDULE(zclSensorTimerCb, NULL, READ_SENSOR_TIMER);
-//    }
+    // read sensors
+	read_sensor_and_save();
+	
+
 }
 
 void ind_init(void)
@@ -235,9 +232,8 @@ void app_task(void)
 {
 	app_key_handler();
 
-	if(clock_time_exceed(g_sensorAppCtx.readSensorTic, g_sensorAppCtx.readSensorTime*1000)){
+	if(clock_time_exceed(g_sensorAppCtx.readSensorTime, READ_SENSOR_TIMER*1000)){
 		read_sensor_and_save();
-		g_sensorAppCtx.readSensorTic = clock_time();
 	}
 
 	if(bdb_isIdle()){
@@ -430,5 +426,4 @@ void user_init(bool isRetention)
 		/* Re-config phy when system recovery from deep sleep with retention */
 		mac_phyReconfig();
 	}
-
 }

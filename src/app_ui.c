@@ -147,24 +147,8 @@ void buttonKeepPressed(u8 btNum){
 
 void buttonShortPressed(u8 btNum){
 	if(btNum == VK_SW1){
-		if(zb_isDeviceJoinedNwk()){
-//			epInfo_t dstEpInfo;
-//			memset((u8 *)&dstEpInfo, 0, sizeof(epInfo_t));
-//
-//			dstEpInfo.dstAddrMode = APS_SHORT_DSTADDR_WITHEP;
-//			dstEpInfo.dstEp = SENSOR_DEVICE_ENDPOINT;
-//			dstEpInfo.dstAddr.shortAddr = 0x0000;
-//			dstEpInfo.profileId = HA_PROFILE_ID;
-
-//			zoneStatusChangeNoti_t statusChangeNotification;
-//
-//			statusChangeNotification.zoneStatus = ZONE_STATUS_TEST;
-//			statusChangeNotification.extStatus = 0;
-//			statusChangeNotification.zoneId = ZCL_ZONE_ID_INVALID;
-//			statusChangeNotification.delay = 0;
-
-			// zcl_iasZone_statusChangeNotificationCmd(SENSOR_DEVICE_ENDPOINT, &dstEpInfo, TRUE, &statusChangeNotification);
-		}
+//		if(zb_isDeviceJoinedNwk()){
+//		}
 	}
 	else if(btNum == VK_SW2){
 //		if(zb_isDeviceJoinedNwk()){
@@ -179,7 +163,7 @@ void keyScan_keyPressedCB(kb_data_t *kbEvt){
 	u8 keyCode = kbEvt->keycode[0];
 	//static u8 lastKeyCode = 0xff;
 
-	buttonShortPressed(keyCode);
+//	buttonShortPressed(keyCode);
 
 	if(keyCode == VK_SW1){
 		g_sensorAppCtx.keyPressedTime = clock_time();

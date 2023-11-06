@@ -127,7 +127,7 @@ extern "C" {
  * we need to configure the detection IO port, and the IO must be connected to the target under test,
  * such as VCC.
  */
-#define VOLTAGE_DETECT_ENABLE						1
+#define VOLTAGE_DETECT_ENABLE						0
 
 #if defined(MCU_CORE_826x)
 	#define VOLTAGE_DETECT_ADC_PIN					0

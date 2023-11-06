@@ -67,7 +67,7 @@ int main(void){
 
 	while(1){
 #if VOLTAGE_DETECT_ENABLE
-		if(clock_time_exceed(tick, 200 * 1000)){ // 200 ms
+		if(clock_time_exceed(tick, 200 * 1000)) { // 200 ms
 			voltage_detect(0);
 			tick = clock_time();
 		}
