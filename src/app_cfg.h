@@ -115,6 +115,7 @@ extern "C" {
 	#include "board_b91_dongle.h"
 #endif
 
+#define READ_SENSOR_TIMER 	10000 // ms
 
 /* Voltage detect module */
 /* If VOLTAGE_DETECT_ENABLE is set,

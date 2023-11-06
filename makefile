@@ -19,7 +19,7 @@ SDK_PATH ?= ./SDK
 # MAKE_PATH: project all make
 MAKE_PATH ?= ./make
 
-LS_FLAGS := $(SDK_PATH)/platform/boot/8258/boot_8258.link
+LS_FLAGS := ./boot.link
 
 OUT_PATH ?=./out
 
@@ -172,10 +172,17 @@ secondary-outputs: $(BIN_FILE) $(LST_FILE) $(SIZEDUMMY)
 
 
 flash: $(BIN_FILE)
-	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -t50 -a2750 -m -w we 0 $(BIN_FILE)
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 we 0 $(BIN_FILE)
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -w -m i
 
 reset:
-	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -t50 -a2750 -m -w i
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 -m -w i
+
+erase:
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 -s ea
+
+info:
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 i
 
 stop:
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -t50 -a2750 i
@@ -183,7 +190,7 @@ stop:
 go:
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -w -m
 
-TADDR?=0x844000
+TADDR?=0x08425e0
 TLEN?=128
 test_damp:
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z10 -c -g ds $(TADDR) $(TLEN)

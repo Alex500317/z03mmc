@@ -18,7 +18,6 @@
 #include "lcd.h"
 #include "reporting.h"
 
-#define SENSOR_USE_TIMER 1
 /**********************************************************************
  * LOCAL CONSTANTS
  */
@@ -132,6 +131,42 @@ void stack_init(void)
 	zb_zdoCbRegister((zdo_appIndCb_t *)&appCbLst);
 }
 
+_attribute_ram_code_
+u8 is_comfort(s16 t, u16 h) {
+	u8 ret = 0;
+	if (t >= cmf.t[0] && t <= cmf.t[1] && h >= cmf.h[0] && h <= cmf.h[1])
+		ret = 1;
+	return ret;
+}
+
+void read_sensor_and_save() {
+
+	read_sensor();
+
+	g_zcl_temperatureAttrs.measuredValue = measured_data.temp;
+    g_zcl_relHumidityAttrs.measuredValue = measured_data.humi;
+
+    g_zcl_powerAttrs.batteryVoltage = (u8)(measured_data.battery_mv / 100);
+    g_zcl_powerAttrs.batteryPercentage = measured_data.battery_level;
+
+    // update lcd
+    show_temp_symbol(1);
+    show_big_number(measured_data.temp / 10, 1);
+    show_small_number(measured_data.humi / 100, 1);
+    show_battery_symbol(measured_data.battery_level < 5);
+#if defined(SHOW_SMILEY)
+    show_smiley(
+        is_comfort(measured_data.temp, measured_data.humi) ? 1 : 2
+    );
+#endif
+    update_lcd();
+}
+
+s32 zclSensorTimerCb(void *arg)
+{
+	read_sensor_and_save();
+	return g_sensorAppCtx.readSensorTime;
+}
 /*********************************************************************
  * @fn      user_app_init
  *
@@ -165,68 +200,14 @@ void user_app_init(void)
     ota_init(OTA_TYPE_CLIENT, (af_simple_descriptor_t *)&sensorDevice_simpleDesc, &sensorDevice_otaInfo, &sensorDevice_otaCb);
 #endif
 
-//	show_zigbe();
-
     // read sensor every 10 seconds
-#if (SENSOR_USE_TIMER)
-//		read_sensor_and_save();
-	    read_sensor_start(10000);
-#endif
+//   	if(!g_sensorAppCtx.timerReadSensorEvt){
+   		read_sensor_and_save();
+   		g_sensorAppCtx.readSensorTime = READ_SENSOR_TIMER;
+   		g_sensorAppCtx.readSensorTic = clock_time();
+//   		g_sensorAppCtx.timerReadSensorEvt = TL_ZB_TIMER_SCHEDULE(zclSensorTimerCb, NULL, READ_SENSOR_TIMER);
+//    }
 }
-
-_attribute_ram_code_
-u8 is_comfort(s16 t, u16 h) {
-	u8 ret = 0;
-	if (t >= cmf.t[0] && t <= cmf.t[1] && h >= cmf.h[0] && h <= cmf.h[1])
-		ret = 1;
-	return ret;
-}
-
-void read_sensor_and_save() {
-	read_sensor();
-    // printf("Temp: %d.%d, humid: %d\r\n", temp/10, temp % 10, humi);
-    g_zcl_temperatureAttrs.measuredValue = measured_data.temp;
-    g_zcl_relHumidityAttrs.measuredValue = measured_data.humi;
-
-	// printf("converted voltage %d diff %d", converted_voltage, (voltage - BATTERY_SAFETY_THRESHOLD));
-	//printf(" , percentage2 %d\r\n", percentage2);
-    g_zcl_powerAttrs.batteryVoltage = (u8)(measured_data.battery_mv / 100);
-    g_zcl_powerAttrs.batteryPercentage = measured_data.battery_level;
-
-    // update lcd
-    show_temp_symbol(1);
-    show_big_number(measured_data.temp / 10, 1);
-    show_small_number(measured_data.humi / 100, 1);
-    show_battery_symbol(measured_data.battery_level < 5);
-#if defined(SHOW_SMILEY)
-    show_smiley(
-        is_comfort(measured_data.temp, measured_data.humi) ? 1 : 2
-    );
-#endif
-    update_lcd();
-}
-
-#if (SENSOR_USE_TIMER)
-s32 zclSensorTimerCb(void *arg)
-{
-	u32 interval = g_sensorAppCtx.readSensorTime;
-	read_sensor_and_save();
-	return interval;
-}
-
-void read_sensor_start(u16 delayTime)
-{
-	u32 interval = 0;
-
-	if(!g_sensorAppCtx.timerReadSensorEvt){
-		read_sensor_and_save();
-		interval = delayTime;
-		g_sensorAppCtx.readSensorTime = delayTime;
-
-		g_sensorAppCtx.timerReadSensorEvt = TL_ZB_TIMER_SCHEDULE(zclSensorTimerCb, NULL, interval);
-	}
-}
-#endif
 
 void ind_init(void)
 {
@@ -237,16 +218,14 @@ void report_handler(void)
 {
 	if(zb_isDeviceJoinedNwk()){
 		if(zcl_reportingEntryActiveNumGet()){
-			// u16 second = 1;//TODO: fix me
 
 			reportNoMinLimit();
 
 			//start report timer
 			app_reportAttrTimerStart();
-			// reportAttrTimerStart(second);
+
 		}else{
 			//stop report timer
-			// reportAttrTimerStop();
 		}
 	}
 }
@@ -255,25 +234,24 @@ void app_task(void)
 {
 	app_key_handler();
 
+	if(clock_time_exceed(g_sensorAppCtx.readSensorTic, g_sensorAppCtx.readSensorTime*1000)){
+		read_sensor_and_save();
+		g_sensorAppCtx.readSensorTic = clock_time();
+	}
+
 	if(bdb_isIdle()){
 #if PM_ENABLE
 		if(!g_sensorAppCtx.keyPressed){
 			drv_pm_lowPowerEnter();
 		}
 #endif
-        // factoryRst_handler();
 		report_handler();
 	}
 }
 
 static void sensorDeviceSysException(void)
 {
-#if 1
 	zb_resetDevice();
-#else
-	light_on();
-	while(1);
-#endif
 }
 
 char int_to_hex(u8 num){
@@ -354,6 +332,8 @@ B2.0 | 0x3C           | 0x44   (SHT4x)    | Test   original string HW
  *
  * @return  None
  */
+u16 reportableChange[4];
+
 void user_init(bool isRetention)
 {
 #if PA_ENABLE
@@ -401,7 +381,7 @@ void user_init(bool isRetention)
 		}
 
 		/* Set default reporting configuration */
-		u8 reportableChange = 0x00;
+		reportableChange[0] = 0;
         bdb_defaultReportingCfg(
 			SENSOR_DEVICE_ENDPOINT,
 			HA_PROFILE_ID,
@@ -409,8 +389,9 @@ void user_init(bool isRetention)
 			ZCL_ATTRID_BATTERY_VOLTAGE,
 			60,
 			3600,
-			(u8 *)&reportableChange
+			(u8 *)&reportableChange[0]
 		);
+        reportableChange[1] = 0;
         bdb_defaultReportingCfg(
 			SENSOR_DEVICE_ENDPOINT,
 			HA_PROFILE_ID,
@@ -418,25 +399,27 @@ void user_init(bool isRetention)
 			ZCL_ATTRID_BATTERY_PERCENTAGE_REMAINING,
 			60,
 			3600,
-			(u8 *)&reportableChange
+			(u8 *)&reportableChange[1]
 		);
+        reportableChange[2] = 10;
 		bdb_defaultReportingCfg(
 			SENSOR_DEVICE_ENDPOINT,
 			HA_PROFILE_ID,
 			ZCL_CLUSTER_MS_TEMPERATURE_MEASUREMENT,
 			ZCL_TEMPERATURE_MEASUREMENT_ATTRID_MEASUREDVALUE,
-			10,
-			0x003c,
-			(u8 *)&reportableChange
+			20,
+			120,
+			(u8 *)&reportableChange[2]
 		);
+        reportableChange[3] = 100;
 		bdb_defaultReportingCfg(
 			SENSOR_DEVICE_ENDPOINT,
 			HA_PROFILE_ID,
 			ZCL_CLUSTER_MS_RELATIVE_HUMIDITY,
 			ZCL_RELATIVE_HUMIDITY_ATTRID_MEASUREDVALUE,
-			10,
-			0x003c,
-			(u8 *)&reportableChange
+			20,
+			120,
+			(u8 *)&reportableChange[3]
 		);
 
 		/* Initialize BDB */
@@ -445,9 +428,6 @@ void user_init(bool isRetention)
 	}else{
 		/* Re-config phy when system recovery from deep sleep with retention */
 		mac_phyReconfig();
-#if (!SENSOR_USE_TIMER)
-		read_sensor_and_save();
-#endif
 	}
 
 }

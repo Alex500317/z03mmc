@@ -165,10 +165,11 @@ void buttonShortPressed(u8 btNum){
 
 			// zcl_iasZone_statusChangeNotificationCmd(SENSOR_DEVICE_ENDPOINT, &dstEpInfo, TRUE, &statusChangeNotification);
 		}
-	}else if(btNum == VK_SW2){
-		if(zb_isDeviceJoinedNwk()){
+	}
+	else if(btNum == VK_SW2){
+//		if(zb_isDeviceJoinedNwk()){
 
-		}
+//		}
 	}
 }
 

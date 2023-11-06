@@ -8,21 +8,13 @@ This repository forked from [devbis/z03mmc](https://github.com/devbis/z03mmc) (!
 
 1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность импорта 'Existing Project' в "Telink IoT Studio".
 
-2. Среднее потребление (+3.3V LYWSD03MMC B1.4) после “bind”, но без привязки кластеров - 20..22 мкА:
+2. Функция опроса датчика объединениа с событием опроса обновления для передачи "report".
 
+3. Заданы интервалы по умолчанию для отчетов по температуре и влажности в 20-120 (мин-мах) секунд, reportableChange в 0.1C и 1%. Итоговое среднее потребление от 16 до 31 мкА в зависимости от динамики изменений температуры и влажности. 31 мкА - при непрерывном изменении.
 
- ![bind_nc.png](https://github.com/pvvx/z03mmc/blob/master/img/bind_nc.png)
+![max_power.png](https://github.com/pvvx/z03mmc/blob/master/img/max_power.png)
 
- Обновления экрана и опрос эфира идут каждые 10 секунд.
-
- Среднее потребление при “bind” с привязкой кластеров 0x402, 0x405 – 54..58  мкА:
-
- ![bind_nc.png](https://github.com/pvvx/z03mmc/blob/master/img/bind_402_405.png)
-
- Обновления экрана и передача замеров идут каждые 10 секунд.
-
-
-3. Требуется разбор SDK для встраивания функции опроса датчика в событие обновления передачи "report".
+4. Требуется дополнения-изменения кода для работы с Xiaomi Gateway 3.
 
 
 Для сборки под Linux выполнить:
@@ -42,22 +34,22 @@ Warning: Undefined symbol 'tl_zbNwkBeaconPayloadUpdate'!
  Section|          Description| Start (hex)|   End (hex)|Used space
 -------------------------------------------------------------------
  ramcode|   Resident Code SRAM|           0|        1510|    5392
-    text|           Code Flash|        1510|       1F2D4|  122308
+    text|           Code Flash|        1510|       1F304|  122356
   rodata| Read Only Data Flash|           0|           0|       0
- cusdata|          Custom SRAM|      8452E0|      8452E0|       0
+ cusdata|          Custom SRAM|      8452EC|      8452EC|       0
       nc|   Wasteful Area SRAM|      841510|      841600|     240
    ictag|     Cache Table SRAM|      841600|      841700|     256
   icdata|      Cache Data SRAM|      841700|      841F00|    2048
     data|       Init Data SRAM|      841F00|      8420C8|     456
-     bss|        BSS Data SRAM|      8420D0|      8452E0|   12816
+     bss|        BSS Data SRAM|      8420D0|      8452EC|   12828
  irq_stk|        BSS Data SRAM|      8420D0|      8422D0|     512
-    cbss| Custom BSS Data SRAM|      8452E0|      8452E0|       0
-   stack|       CPU Stack SRAM|      8452E0|      850000|   44320
-   flash|       Bin Size Flash|           0|       1F49C|  128156
+    cbss| Custom BSS Data SRAM|      8452EC|      8452EC|       0
+   stack|       CPU Stack SRAM|      8452EC|      850000|   44308
+   flash|       Bin Size Flash|           0|       1F4CC|  128204
 -------------------------------------------------------------------
 Start Load SRAM : 0 (ICtag: 0x0)
-Total Used SRAM : 21216 from 65536
-Total Free SRAM : 240 + stack[44320] = 44560
+Total Used SRAM : 21228 from 65536
+Total Free SRAM : 240 + stack[44308] = 44548
 ```
 
 Под Window, после импорта в ‘Telink IoT Studio’, выполнить “make install” или в папке проекта:

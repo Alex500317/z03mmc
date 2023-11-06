@@ -202,9 +202,9 @@ const zclAttrInfo_t iasZone_attrTbl[] =
 zcl_temperatureAttr_t g_zcl_temperatureAttrs =
 {
 	.measuredValue	= 0x8000,
-	.minValue 		= 0xf6e6, // 0x954d,
-	.maxValue		= 0x7fff,
-	.tolerance		= 0x0000,
+	.minValue 		= -5000,
+	.maxValue		= 17500,
+	.tolerance		= 0,
 };
 
 const zclAttrInfo_t temperature_measurement_attrTbl[] =
@@ -225,9 +225,9 @@ const zclAttrInfo_t temperature_measurement_attrTbl[] =
 zcl_relHumidityAttr_t g_zcl_relHumidityAttrs =
 {
 	.measuredValue	= 0xffff,
-	.minValue 		= 0x0000,
-	.maxValue		= 0x2710,
-	.tolerance		= 0x0000,
+	.minValue 		= 0,
+	.maxValue		= 9999,
+	.tolerance		= 0,
 };
 
 const zclAttrInfo_t relative_humdity_attrTbl[] =

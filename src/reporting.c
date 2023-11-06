@@ -18,32 +18,36 @@ static s32 app_reportMinAttrTimerCb(void *arg) {
     }
 
     if (pEntry->minInterval == pEntry->maxInterval) {
-        reportAttr(pEntry);
-        app_reporting->time_posted = clock_time();
 #if UART_PRINTF_MODE
         printf("Report Min_Interval has been sent. endPoint: %d, clusterID: 0x%x, attrID: 0x%x, minInterval: %d, maxInterval: %d\r\n",
                 pEntry->endPoint, pEntry->clusterID, pEntry->attrID, pEntry->minInterval, pEntry->maxInterval);
 #endif
-        return 0;
-    }
-
-    u8 len = zcl_getAttrSize(pAttrEntry->type, pAttrEntry->data);
-
-
-    len = (len>8) ? (8):(len);
-
-    if( (!zcl_analogDataType(pAttrEntry->type) && (memcmp(pEntry->prevData, pAttrEntry->data, len) != SUCCESS)) ||
-            ((zcl_analogDataType(pAttrEntry->type) && reportableChangeValueChk(pAttrEntry->type,
-            pAttrEntry->data, pEntry->prevData, pEntry->reportableChange)))) {
-
         reportAttr(pEntry);
         app_reporting->time_posted = clock_time();
+    } else {
+        if(zcl_analogDataType(pAttrEntry->type)) {
+        	if(reportableChangeValueChk(pAttrEntry->type,
+                pAttrEntry->data, pEntry->prevData, pEntry->reportableChange)) {
 #if UART_PRINTF_MODE
-        printf("Report Min_Interval has been sent. endPoint: %d, clusterID: 0x%x, attrID: 0x%x, minInterval: %d, maxInterval: %d\r\n",
-                pEntry->endPoint, pEntry->clusterID, pEntry->attrID, pEntry->minInterval, pEntry->maxInterval);
+        		printf("Report Min_Interval has been sent. endPoint: %d, clusterID: 0x%x, attrID: 0x%x, minInterval: %d, maxInterval: %d\r\n",
+                    pEntry->endPoint, pEntry->clusterID, pEntry->attrID, pEntry->minInterval, pEntry->maxInterval);
 #endif
+                reportAttr(pEntry);
+                app_reporting->time_posted = clock_time();
+        	}
+        } else {
+            u8 len = zcl_getAttrSize(pAttrEntry->type, pAttrEntry->data);
+            len = (len>8) ? (8):(len);
+        	if(memcmp(pEntry->prevData, pAttrEntry->data, len) != SUCCESS) {
+#if UART_PRINTF_MODE
+        		printf("Report Min_Interval has been sent. endPoint: %d, clusterID: 0x%x, attrID: 0x%x, minInterval: %d, maxInterval: %d\r\n",
+                    pEntry->endPoint, pEntry->clusterID, pEntry->attrID, pEntry->minInterval, pEntry->maxInterval);
+#endif
+                reportAttr(pEntry);
+                app_reporting->time_posted = clock_time();
+        	}
+        }
     }
-
     return 0;
 }
 
