@@ -211,7 +211,6 @@ void start_measure_sensor_deep_sleep(void) {
 
 int read_sensor(void) {
 	start_measure_sensor_deep_sleep();
-    measured_data.battery_level = get_battery_level(measured_data.battery_mv);
-	return read_sensor_cb();
+  	return read_sensor_cb();
 }
 

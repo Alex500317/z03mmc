@@ -17,6 +17,7 @@
 #include "sensor.h"
 #include "lcd.h"
 #include "reporting.h"
+#include "battery.h"
 
 /**********************************************************************
  * LOCAL CONSTANTS
@@ -147,13 +148,13 @@ void read_sensor_and_save() {
     g_zcl_relHumidityAttrs.measuredValue = measured_data.humi;
 
     g_zcl_powerAttrs.batteryVoltage = (u8)(measured_data.battery_mv / 100);
-    g_zcl_powerAttrs.batteryPercentage = measured_data.battery_level;
+    g_zcl_powerAttrs.batteryPercentage = get_battery_level_in_zigbee_sepulkas(measured_data.battery_mv); // level in zigbee sepulkas
 
     // update lcd
     show_temp_symbol(1);
     show_big_number(measured_data.temp / 10, 1);
     show_small_number(measured_data.humi / 100, 1);
-    show_battery_symbol(measured_data.battery_level < 5);
+    show_battery_symbol(g_zcl_powerAttrs.batteryPercentage < 10);
 #if defined(SHOW_SMILEY)
     show_smiley(
         is_comfort(measured_data.temp, measured_data.humi) ? 1 : 2

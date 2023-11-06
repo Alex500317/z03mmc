@@ -172,7 +172,8 @@ secondary-outputs: $(BIN_FILE) $(LST_FILE) $(SIZEDUMMY)
 
 
 flash: $(BIN_FILE)
-	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z11 we 0 $(BIN_FILE)
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z15 -a-50 -s fsw 0
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z5 we 0 $(BIN_FILE)
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -w -m i
 
 reset:

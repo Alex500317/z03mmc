@@ -14,7 +14,6 @@ typedef struct _measured_data_t {
 	uint16_t	battery_mv; // mV
 	int16_t		temp; // x 0.01 C
 	int16_t		humi; // x 0.01 %
-	uint8_t 	battery_level;	// 0..100% (average_battery_mv)
 } measured_data_t;
 
 extern u8 sensor_i2c_addr;

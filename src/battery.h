@@ -7,5 +7,6 @@
 
 #define END_VBAT_MV		2000 // It is not recommended to write Flash below 2V, go to deep-sleep
 
-uint8_t get_battery_level(uint16_t battery_mv);
+/* battery level in zigbee sepulkas */
+uint8_t get_battery_level_in_zigbee_sepulkas(uint16_t battery_mv);
 
