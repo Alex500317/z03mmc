@@ -4,6 +4,23 @@ This repository forked from [devbis/z03mmc](https://github.com/devbis/z03mmc) (!
 
 Актуальную версию смотрите в [devbis/z03mmc](https://github.com/devbis/z03mmc)!
 
+
+ **An alternative version flash the Zigbee firmware in Xiaomi LYWSD03MMC in TelinkMiFlasher from version 6.7.**
+
+To flash the Zigbee firmware, use a Google Chrome, Microsoft Edge or Opera Browser.
+	1. Go to the [Over-the-air Webupdater Page TelinkMiFlasher.html](https://pvvx.github.io/ATC_MiThermometer/TelinkMiFlasher.html)
+	2. If using Android, Windows, Linux: Ensure you enabled "experimental web platform features". Therefore copy the according link (i.e. chrome://flags/#enable-experimental-web-platform-features for Chrome), open a new browser tab, paste the copied URL. Now sten the _Experimental Web Platform features_ flag to _Enabled_. Then restart the browser.
+	3. In the Telink Flasher Page: Press `Connect:`. The browser should open a popup with visible Bluetooth devices. Choose the according target device (i.e. LYWSD03MMC) to pair.
+	4. After connection is established a _Do Acivation_ button appears. Press this button to start the decryption key process.
+	5. Now you can press the Zigbee Firmware button to directly flash the `Zigbee Firmware`:<br>![image](https://github.com/devbis/z03mmc/assets/12629515/f0212a45-4c2c-43a1-a237-5ec358e6d0cb)<br>Alternatively you can choose a specific firmware binary (i.e. the original firmware) via the file chooser
+	7. Press Start Flashing. Wait for the firmware to finish.
+	8. The device should now show up in your Zigbee bridge (If joining is enabled, of course). If it doesn't, reinsert the battery and/or short the RESET and GND contacts on the board for 3 seconds.
+
+A brief description of the installed version of the Zigbee firmware is in this [fork](https://github.com/pvvx/z03mmc).
+In the future, you can update the [Zigbee firmware to the version from devbis](https://github.com/devbis/z03mmc).
+
+---
+
 Текущие тесты-задачи-дополнения:
 
 1. Добавлена сборка проекта с помощью ‘make’ (Windows/linux) и возможность импорта 'Existing Project' в "Telink IoT Studio".
