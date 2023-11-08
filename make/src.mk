@@ -20,10 +20,15 @@ $(OUT_PATH)$(SRC_DIR)/drv_flash.o \
 $(OUT_PATH)$(SRC_DIR)/common/main.o \
 $(OUT_PATH)$(SRC_DIR)/common/factory_reset.o \
 $(OUT_PATH)$(SRC_DIR)/common/firmwareEncryptChk.o \
-$(OUT_PATH)$(SRC_DIR)/common/module_test.o 
-
+$(OUT_PATH)$(SRC_DIR)/common/module_test.o \
+$(OUT_PATH)$(SRC_DIR)/cstartup_8258.o \
+$(OUT_PATH)$(SRC_DIR)/ext_ota.o
 
 # Each subdirectory must supply rules for building sources it contributes
 $(OUT_PATH)$(SRC_DIR)/%.o: $(PROJECT_PATH)$(SRC_DIR)/%.c
 	@echo 'Building file: $<'
 	@$(TC32_PATH)tc32-elf-gcc $(GCC_FLAGS) $(INCLUDE_PATHS) -c -o"$@" "$<"
+	
+$(OUT_PATH)$(SRC_DIR)/%.o: $(PROJECT_PATH)$(SRC_DIR)/%.S
+	@echo 'Building file: $<'
+	@$(TC32_PATH)tc32-elf-gcc $(GCC_FLAGS) $(ASM_FLAGS) $(INCLUDE_PATHS) -c -o"$@" "$<"	

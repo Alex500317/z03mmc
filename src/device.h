@@ -19,12 +19,13 @@ typedef struct{
 
 typedef struct{
 	ev_timer_event_t *timerLedEvt;
-	ev_timer_event_t *timerReadSensorEvt;
+	ev_timer_event_t *timerKeyEvt;
+	u32 bindTime;
 	u32 keyPressedTime;
+	u32 readSensorTime; // read sensor timer
 
 	u16 ledOnTime;
 	u16 ledOffTime;
-	u32 readSensorTime; // read sensor timer
 	u8 	oriSta;		//original state before blink
 	u8 	sta;		//current state in blink
 	u8 	times;		//blink times

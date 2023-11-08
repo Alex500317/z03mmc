@@ -41,8 +41,8 @@
 		#define CHIP_TYPE					TLSR_B91
 #endif
 
-#define APP_RELEASE							0x10//app release 1.0
-#define APP_BUILD							0x05//app build 05
+#define APP_RELEASE							0x01//app release 1.0
+#define APP_BUILD							0x01//app build 05
 #define STACK_RELEASE						0x30//stack release 3.0
 #define STACK_BUILD							0x01//stack build 01
 

@@ -38,6 +38,8 @@ extern "C" {
  * Product Information
  */
 /* Debug mode config */
+#define	DEBUG_ENABLE					1 // lcd = DeviceSysException
+
 #define	UART_PRINTF_MODE				0
 #define USB_PRINTF_MODE         		0
 
@@ -170,6 +172,7 @@ extern "C" {
 /**********************************************************************
  * Stack configuration
  */
+#include "includes/zb_config.h"
 #include "stack_cfg.h"
 
 

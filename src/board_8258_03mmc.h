@@ -19,11 +19,13 @@ extern "C" {
 #define PA5_INPUT_ENABLE	  		1
 #define	PULL_WAKEUP_SRC_PA5	  		PM_PIN_PULLUP_10K
 
+/*
 #define BUTTON2               		GPIO_PA6  // P8 test point
 #define PA6_FUNC			  		AS_GPIO
 #define PA6_OUTPUT_ENABLE	  		0
 #define PA6_INPUT_ENABLE	  		1
 #define	PULL_WAKEUP_SRC_PA6	  		PM_PIN_PULLUP_1M
+*/
 
 #define	PULL_WAKEUP_SRC_PB6	  		PM_PIN_PULLUP_10K
 

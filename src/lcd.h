@@ -19,3 +19,4 @@ void show_small_number(u16 number, bool percent);
 void show_smiley(u8 state);
 void show_ble_symbol(bool state);
 void send_to_lcd_long(u8 byte1, u8 byte2, u8 byte3, u8 byte4, u8 byte5, u8 byte6);
+void show_blink_screen(void);

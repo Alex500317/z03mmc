@@ -30,16 +30,9 @@
  * CONSTANT
  */
 
-
 /**********************************************************************
  * TYPEDEFS
  */
-enum{
-	APP_STATE_NORMAL,
-	APP_FACTORY_NEW_SET_CHECK,
-	APP_FACTORY_NEW_DOING
-};
-
 
 /**********************************************************************
  * FUNCTIONS
@@ -51,7 +44,7 @@ void light_init(void);
 void light_on(void);
 void light_off(void);
 
-void app_key_handler(void);
+void tack_keys(void);
 
 void read_sensor_start(u16 delayTime);
 

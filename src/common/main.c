@@ -26,7 +26,7 @@
 #include "zb_common.h"
 
 extern void user_init(bool isRetention);
-
+extern void test_first_ota(void);
 
 /*
  * main:
@@ -36,13 +36,9 @@ int main(void){
 	startup_state_e state = drv_platform_init();
 
 	u8 isRetention = (state == SYSTEM_DEEP_RETENTION) ? 1 : 0;
+	if(!isRetention) test_first_ota();
 
 	os_init(isRetention);
-
-#if 0
-	extern void moduleTest_start(void);
-	moduleTest_start();
-#endif
 
 	/* reduce power consumption, disable CLK disable CLK of unused peripherals*/
 

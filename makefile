@@ -19,7 +19,7 @@ SDK_PATH ?= ./SDK
 # MAKE_PATH: project all make
 MAKE_PATH ?= ./make
 
-LS_FLAGS := ./boot.link
+LS_FLAGS := $(SRC_PATH)/boot.link
 
 OUT_PATH ?=./out
 
@@ -88,7 +88,7 @@ ASM_FLAGS := \
 -fno-rtti \
 -fno-threadsafe-statics
 
-INCLUDE_PATHS := -I$(SRC_PATH) -I$(SRC_PATH)/common  -I$(SRC_PATH)/custom_zcl\
+INCLUDE_PATHS := -I$(SRC_PATH) -I$(SRC_PATH)/includes -I$(SRC_PATH)/common  -I$(SRC_PATH)/custom_zcl\
 -I$(SDK_PATH)/platform \
 -I$(SDK_PATH)/proj \
 -I$(SDK_PATH)/proj/common \

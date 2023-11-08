@@ -2,22 +2,22 @@
  * INCLUDES
  */
 #include "tl_common.h"
+#include "device.h"
 #include "zb_api.h"
 #include "zcl_include.h"
 #include "bdb.h"
 #include "ota.h"
-#include "device.h"
-#include "app_ui.h"
 #if ZBHCI_EN
 #include "zbhci.h"
 #endif
 
+#include "app_ui.h"
 #include "zcl_relative_humidity.h"
 #include "app_i2c.h"
 #include "sensor.h"
 #include "lcd.h"
 #include "reporting.h"
-
+#include "ext_ota.h"
 
 /**********************************************************************
  * LOCAL CONSTANTS
@@ -86,21 +86,6 @@ bdb_commissionSetting_t g_bdbCommissionSetting = {
 	.touchlinkLqiThreshold = 0xA0,			   							/* threshold for touch-link scan req/resp command */
 };
 
-#if PM_ENABLE
-/**
- *  @brief Definition for wakeup source and level for PM
- */
-drv_pm_pinCfg_t g_sensorPmCfg[] = {
-	{
-		BUTTON1,
-		PM_WAKEUP_LEVEL
-	},
-	{
-		BUTTON2,
-		PM_WAKEUP_LEVEL
-	}
-};
-#endif
 /**********************************************************************
  * LOCAL VARIABLES
  */
@@ -200,55 +185,62 @@ void user_app_init(void)
 #if ZCL_OTA_SUPPORT
     ota_init(OTA_TYPE_CLIENT, (af_simple_descriptor_t *)&sensorDevice_simpleDesc, &sensorDevice_otaInfo, &sensorDevice_otaCb);
 #endif
-
+    if(!zb_isDeviceJoinedNwk())
+    	g_sensorAppCtx.bindTime = clock_time() | 1;
     // read sensors
 	read_sensor_and_save();
-	
-
-}
-
-void ind_init(void)
-{
-	light_init();
-}
-
-void report_handler(void)
-{
-	if(zb_isDeviceJoinedNwk()){
-		if(zcl_reportingEntryActiveNumGet()){
-
-			reportNoMinLimit();
-
-			//start report timer
-			app_reportAttrTimerStart();
-
-		}else{
-			//stop report timer
-		}
-	}
 }
 
 void app_task(void)
 {
-	app_key_handler();
+	tack_keys();
 
 	if(clock_time_exceed(g_sensorAppCtx.readSensorTime, READ_SENSOR_TIMER*1000)){
 		read_sensor_and_save();
 	}
 
 	if(bdb_isIdle()){
-#if PM_ENABLE
-		if(!g_sensorAppCtx.keyPressed){
-			drv_pm_lowPowerEnter();
+		// report handler
+		if(zb_isDeviceJoinedNwk()){
+			if(!g_sensorAppCtx.timerLedEvt)
+				show_ble_symbol(false);
+			g_sensorAppCtx.bindTime = 0;
+			if(zcl_reportingEntryActiveNumGet()){
+				reportNoMinLimit();
+				//start report timer
+				app_reportAttrTimerStart();
+			}else{
+				//stop report timer
+			}
+		} else {
+			if(!g_sensorAppCtx.timerLedEvt)
+				show_ble_symbol(true);
+			if(g_sensorAppCtx.bindTime) {
+				if(clock_time_exceed(g_sensorAppCtx.bindTime,	45 *1000 * 1000)) { // 45 sec
+					show_blink_screen();
+					update_lcd();
+					drv_pm_sleep(PM_SLEEP_MODE_DEEPSLEEP, PM_WAKEUP_SRC_PAD, 0);
+				}
+			}
 		}
+#if PM_ENABLE
+		drv_pm_lowPowerEnter();
 #endif
-		report_handler();
 	}
 }
 
-static void sensorDeviceSysException(void)
+
+void sensorDeviceSysException(void)
 {
+#if DEBUG_ENABLE
+	extern volatile u16 T_evtExcept[4];
+	show_big_number(T_evtExcept[0], false);
+	show_small_number(T_evtExcept[1], false);
+	update_lcd();
+	drv_pm_sleep(PM_SLEEP_MODE_DEEPSLEEP, 0, 20*1000);
+#else
 	zb_resetDevice();
+#endif
 }
 
 char int_to_hex(u8 num){
@@ -341,13 +333,11 @@ void user_init(bool isRetention)
 	zbhciInit();
 #endif
 
-#if PM_ENABLE
-	drv_pm_wakeupPinConfig(g_sensorPmCfg, sizeof(g_sensorPmCfg)/sizeof(drv_pm_pinCfg_t));
-#endif
-
-//	init_i2c();
 	if(!isRetention){
-	    /* Populate properties with compiled-in values */
+
+//		test_first_ota();
+
+		/* Populate properties with compiled-in values */
 		populate_sw_build();
 		populate_date_code();
 
@@ -359,11 +349,13 @@ void user_init(bool isRetention)
 
 		populate_hw_version();
 
-		/* Initialize user application */
-		user_app_init();
-
+#if DEBUG_ENABLE
 		/* Register except handler for test */
 		sys_exceptHandlerRegister(sensorDeviceSysException);
+#endif
+
+		/* Initialize user application */
+		user_app_init();
 
 		/* User's Task */
 #if ZBHCI_EN
@@ -404,7 +396,7 @@ void user_init(bool isRetention)
 			HA_PROFILE_ID,
 			ZCL_CLUSTER_MS_TEMPERATURE_MEASUREMENT,
 			ZCL_TEMPERATURE_MEASUREMENT_ATTRID_MEASUREDVALUE,
-			20,
+			25,
 			120,
 			(u8 *)&reportableChange[2]
 		);
@@ -414,7 +406,7 @@ void user_init(bool isRetention)
 			HA_PROFILE_ID,
 			ZCL_CLUSTER_MS_RELATIVE_HUMIDITY,
 			ZCL_RELATIVE_HUMIDITY_ATTRID_MEASUREDVALUE,
-			20,
+			25,
 			120,
 			(u8 *)&reportableChange[3]
 		);

@@ -27,13 +27,12 @@
  * INCLUDES
  */
 #include "tl_common.h"
+#include "device.h"
 #include "zb_api.h"
 #include "zcl_include.h"
-#include "device.h"
-#include "app_ui.h"
-
-#include "sensor.h"
 #include "lcd.h"
+#include "app_ui.h"
+#include "sensor.h"
 
 /**********************************************************************
  * LOCAL CONSTANTS
@@ -129,71 +128,53 @@ void light_blink_stop(void)
 
 /*******************************************************************
  * @brief	Button click detect:
- * 			SW1. keep press button1 5s === factory reset
- * 			SW1. short press button1   === send level step with OnOff command (Up)
- * 			SW2. keep press button2 5s === invoke EZ-Mode
- * 			SW2. short press button2   === send level step with OnOff command (Down)
- *
+ * 			keep press button1 3s === factory reset
  */
-void buttonKeepPressed(u8 btNum){
-	if(btNum == VK_SW1){
-		g_sensorAppCtx.state = APP_FACTORY_NEW_DOING;
-		tl_bdbReset2FN();
-		zb_resetDevice();
-	}else if(btNum == VK_SW2){
 
-	}
-}
-
-void buttonShortPressed(u8 btNum){
-	if(btNum == VK_SW1){
-//		if(zb_isDeviceJoinedNwk()){
-//		}
-	}
-	else if(btNum == VK_SW2){
-//		if(zb_isDeviceJoinedNwk()){
-
-//		}
-	}
-}
-
-
-void keyScan_keyPressedCB(kb_data_t *kbEvt){
-	//u8 toNormal = 0;
-	u8 keyCode = kbEvt->keycode[0];
-	//static u8 lastKeyCode = 0xff;
-
-//	buttonShortPressed(keyCode);
-
-	if(keyCode == VK_SW1){
-		g_sensorAppCtx.keyPressedTime = clock_time();
-		g_sensorAppCtx.state = APP_FACTORY_NEW_SET_CHECK;
-	}
-}
-
-
-void keyScan_keyReleasedCB(u8 keyCode){
-	g_sensorAppCtx.state = APP_STATE_NORMAL;
-}
-
-void app_key_handler(void){
-	static u8 valid_keyCode = 0xff;
-	if(g_sensorAppCtx.state == APP_FACTORY_NEW_SET_CHECK){
-		if(clock_time_exceed(g_sensorAppCtx.keyPressedTime, 3*1000*1000)){
-			buttonKeepPressed(VK_SW1);
+static s32 keyTimerCb(void *arg)
+{
+	u8 button_on = gpio_read(BUTTON1)? 0 : 1;
+	if(button_on) {
+		// button on
+		if(g_sensorAppCtx.keyPressed
+			&& g_sensorAppCtx.timerKeyEvt
+			&& clock_time_exceed(
+					g_sensorAppCtx.keyPressedTime,
+					3000 * 1000)) { // 3 sec
+			g_sensorAppCtx.keyPressedTime = clock_time();
+			g_sensorAppCtx.bindTime = clock_time() | 1;
+			light_off();
+			tl_bdbReset2FN();
+#if PM_ENABLE
+//			drv_pm_sleep(PM_SLEEP_MODE_DEEP_WITH_RETENTION, 0, 1000); // 1 sec
+#else
+//			zb_resetDevice();
+#endif
+		} else {
+			g_sensorAppCtx.keyPressed = button_on;
+			return 0;
 		}
 	}
-	if(kb_scan_key(0 , 1)){
-		if(kb_event.cnt){
-			g_sensorAppCtx.keyPressed = 1;
-			keyScan_keyPressedCB(&kb_event);
-			if(kb_event.cnt == 1){
-				valid_keyCode = kb_event.keycode[0];
-			}
-		}else{
-			keyScan_keyReleasedCB(valid_keyCode);
-			valid_keyCode = 0xff;
-			g_sensorAppCtx.keyPressed = 0;
+	g_sensorAppCtx.timerKeyEvt = NULL;
+	g_sensorAppCtx.keyPressed = button_on;
+	return -1;
+}
+
+void tack_keys(void) {
+	u8 button_on = gpio_read(BUTTON1)? 0 : 1;
+	if(button_on) {
+		// button on
+		if(!g_sensorAppCtx.keyPressed) {
+			// event button on
+			light_on();
+			g_sensorAppCtx.keyPressedTime = clock_time();
+			if(!g_sensorAppCtx.timerKeyEvt)
+				g_sensorAppCtx.timerKeyEvt
+				= TL_ZB_TIMER_SCHEDULE(keyTimerCb, NULL, 500); // 500 ms
 		}
 	}
+	g_sensorAppCtx.keyPressed = button_on;
+#if PM_ENABLE
+	cpu_set_gpio_wakeup(BUTTON1, button_on , 1);
+#endif
 }

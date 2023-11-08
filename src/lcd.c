@@ -1,4 +1,4 @@
-#include "compiler.h"
+//#include "compiler.h"
 #include "tl_common.h"
 #include "app_cfg.h"
 #include "chip_8258/timer.h"
@@ -287,4 +287,18 @@ void show_small_number(u16 number, bool percent){
 	display_buff[1] = display_buff[1] & 0x08;
 	if(number > 9)display_buff[1] |= display_numbers[number / 10 % 10] & 0xF7;
     display_buff[0] |= display_numbers[number %10] & 0xF7;
+}
+
+
+void show_blink_screen(void) {
+	memset(&display_buff, 0, sizeof(display_buff));
+	display_buff[2] = BIT(4); // "ble"
+	display_buff[3] = BIT(7); // "_"
+	display_buff[4] = BIT(7); // "_"
+	display_buff[5] = BIT(7); // "_"
+	send_to_lcd();
+	if(i2c_address_lcd == B19_I2C_ADDR << 1) {
+		u8 b = 0xf2;
+		lcd_send_i2c_buf(&b, 1);
+	}
 }
