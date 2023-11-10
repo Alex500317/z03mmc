@@ -43,12 +43,12 @@
 #define USE_SENSOR_ID	0
 #define SUPPORT_BAD_SENSOR	0  // DEVICE_CGDK2
 
-uint8_t sensor_i2c_addr;
-uint8_t sensor_version;
+u8 sensor_i2c_addr;
+u8 sensor_version;
 
 measured_data_t measured_data;
 
-static void send_sensor_word(uint16_t cmd) {
+static void send_sensor_word(u16 cmd) {
 	unsigned char r = irq_disable();
 	if ((reg_clk_en0 & FLD_CLK0_I2C_EN)==0)
 			init_i2c();
@@ -59,7 +59,7 @@ static void send_sensor_word(uint16_t cmd) {
 	irq_restore(r);
 }
 
-static void send_sensor_byte(uint8_t cmd) {
+static void send_sensor_byte(u8 cmd) {
 
 	unsigned char r = irq_disable();
 	if ((reg_clk_en0 & FLD_CLK0_I2C_EN)==0)
@@ -87,7 +87,7 @@ static void soft_reset_sensor(void) {
 	}
 }
 
-uint8_t sensor_crc(uint8_t crc) {
+u8 sensor_crc(u8 crc) {
 	int i;
 	for(i = 8; i > 0; i--) {
 		if (crc & 0x80)
@@ -100,13 +100,13 @@ uint8_t sensor_crc(uint8_t crc) {
 
 
 static int check_sensor(void) {
-	if ((sensor_i2c_addr = (uint8_t) test_i2c_device(SHTC3_I2C_ADDR << 1)) != 0) {
+	if ((sensor_i2c_addr = (u8) test_i2c_device(SHTC3_I2C_ADDR << 1)) != 0) {
 		sensor_version = 1; // = 1 - sensor SHTC3
 	} else {
-		sensor_i2c_addr = (uint8_t) test_i2c_device(SHT4x_I2C_ADDR << 1);
+		sensor_i2c_addr = (u8) test_i2c_device(SHT4x_I2C_ADDR << 1);
 		sensor_version = 0; // = 0 - sensor SHT4x or ?
 		if(!sensor_i2c_addr)
-			sensor_i2c_addr = (uint8_t) test_i2c_device(SHT4xB_I2C_ADDR << 1);
+			sensor_i2c_addr = (u8) test_i2c_device(SHT4xB_I2C_ADDR << 1);
 	}
 	soft_reset_sensor();
 	// no i2c sensor ? sensor_i2c_addr = 0
@@ -127,9 +127,9 @@ void init_sensor(void) {
 
 __attribute__((optimize("-Os")))
 int read_sensor_cb(void) {
-	uint16_t _temp;
-	uint16_t _humi;
-	uint8_t data, crc; // calculated checksum
+	u16 _temp;
+	u16 _humi;
+	u8 data, crc; // calculated checksum
 	int i;
 	if ((reg_clk_en0 & FLD_CLK0_I2C_EN)==0)
 		init_i2c();

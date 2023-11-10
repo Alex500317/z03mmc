@@ -4,6 +4,7 @@
 #include "tl_common.h"
 #include "zcl_include.h"
 #include "zcl_relative_humidity.h"
+#include "zcl_thermostat_ui_cfg.h"
 #include "device.h"
 
 /**********************************************************************
@@ -20,12 +21,15 @@
 
 #else // MIMIC_HEIMAN
 
-#ifndef ZCL_BASIC_MFG_NAME
+#if BOARD == BOARD_LYWSD03MMC
 #define ZCL_BASIC_MFG_NAME     {6,'X','i','a','o','m','i'}
-#endif
-#ifndef ZCL_BASIC_MODEL_ID
 #define ZCL_BASIC_MODEL_ID	   {10,'L','Y','W','S','D','0','3','M','M','C'}
-#endif
+#elif BOARD == BOARD_CGDK2
+#define ZCL_BASIC_MFG_NAME     {6,'Q','i','n','g','p','i','n','g'} // Qingping
+#define ZCL_BASIC_MODEL_ID	   {5,'C','G','D','K','2'} // CGDK2
+#else
+#error "Define BOARD!"
+#endif // BOARD
 
 #endif // MIMIC_HEIMAN
 
@@ -157,7 +161,7 @@ const zclAttrInfo_t identify_attrTbl[] =
 zcl_powerAttr_t g_zcl_powerAttrs =
 {
     .batteryVoltage    = 30, //in 100 mV units, 0xff - unknown
-    .batteryPercentage = 0xC8, //in 0,5% units, 0xff - unknown
+    .batteryPercentage = 200 //in 0,5% units, 0xff - unknown
 };
 
 const zclAttrInfo_t powerCfg_attrTbl[] =
@@ -243,6 +247,22 @@ const zclAttrInfo_t relative_humdity_attrTbl[] =
 #define	ZCL_RELATIVE_HUMIDITY_ATTR_NUM		 sizeof(relative_humdity_attrTbl) / sizeof(zclAttrInfo_t)
 #endif
 
+#ifdef ZCL_THERMOSTAT_UI_CFG
+zcl_thermostatUICfgAttr_t g_zcl_thermostatUICfgAttrs =
+{
+	.displayMode	= 0x00,
+};
+
+const zclAttrInfo_t thermostat_ui_cfg_attrTbl[] =
+{
+	{ ZCL_THERMOSTAT_UI_CFG_ATTRID_TEMPERATUREDISPLAYMODE,       ZCL_DATA_TYPE_ENUM8,    ACCESS_CONTROL_READ | ACCESS_CONTROL_WRITE, (u8*)&g_zcl_thermostatUICfgAttrs.displayMode },
+
+	{ ZCL_ATTRID_GLOBAL_CLUSTER_REVISION, 	ZCL_DATA_TYPE_UINT16,  	ACCESS_CONTROL_READ,  						(u8*)&zcl_attr_global_clusterRevision},
+};
+
+#define	ZCL_THERMOSTAT_UI_CFG_ATTR_NUM		 sizeof(thermostat_ui_cfg_attrTbl) / sizeof(zclAttrInfo_t)
+#endif
+
 
 #ifdef ZCL_POLL_CTRL
 /* Poll Control */
@@ -280,7 +300,9 @@ const zcl_specClusterInfo_t g_sensorDeviceClusterList[] =
 {
 	{ZCL_CLUSTER_GEN_BASIC,			MANUFACTURER_CODE_NONE, ZCL_BASIC_ATTR_NUM, 	basic_attrTbl,  	zcl_basic_register,		sensorDevice_basicCb},
 	{ZCL_CLUSTER_GEN_IDENTIFY,		MANUFACTURER_CODE_NONE, ZCL_IDENTIFY_ATTR_NUM,	identify_attrTbl,	zcl_identify_register,	sensorDevice_identifyCb},
+#ifdef ZCL_POWER_CFG
 	{ZCL_CLUSTER_GEN_POWER_CFG,		MANUFACTURER_CODE_NONE,	ZCL_POWER_CFG_ATTR_NUM,	powerCfg_attrTbl,	zcl_powerCfg_register,	sensorDevice_powerCfgCb},
+#endif
 #ifdef ZCL_IAS_ZONE
 	{ZCL_CLUSTER_SS_IAS_ZONE,		MANUFACTURER_CODE_NONE, ZCL_IASZONE_ATTR_NUM,	iasZone_attrTbl,	zcl_iasZone_register,	sensorDevice_iasZoneCb},
 #endif
@@ -289,6 +311,10 @@ const zcl_specClusterInfo_t g_sensorDeviceClusterList[] =
 #endif
 #ifdef ZCL_RELATIVE_HUMIDITY
 	{ZCL_CLUSTER_MS_RELATIVE_HUMIDITY,	MANUFACTURER_CODE_NONE, ZCL_RELATIVE_HUMIDITY_ATTR_NUM, 		relative_humdity_attrTbl,	zcl_relative_humidity_register, 	NULL},
+#endif
+#ifdef ZCL_THERMOSTAT_UI_CFG
+	// typo in SDK
+	{ZCL_CLUSTER_HAVC_USER_INTERFACE_CONFIG, MANUFACTURER_CODE_NONE, ZCL_THERMOSTAT_UI_CFG_ATTR_NUM, thermostat_ui_cfg_attrTbl,	zcl_thermostat_ui_cfg_register, 	NULL},
 #endif
 #ifdef ZCL_POLL_CTRL
 	{ZCL_CLUSTER_GEN_POLL_CONTROL,  MANUFACTURER_CODE_NONE, ZCL_POLLCTRL_ATTR_NUM, 	pollCtrl_attrTbl,   zcl_pollCtrl_register,	sensorDevice_pollCtrlCb},
@@ -300,3 +326,71 @@ u8 SENSOR_DEVICE_CB_CLUSTER_NUM = (sizeof(g_sensorDeviceClusterList)/sizeof(g_se
 /**********************************************************************
  * FUNCTIONS
  */
+
+/*********************************************************************
+ * @fn      zcl_thermostatDisplayMode_save
+ *
+ * @brief
+ *
+ * @param   None
+ *
+ * @return
+ */
+nv_sts_t zcl_thermostatDisplayMode_save(void)
+{
+	nv_sts_t st = NV_SUCC;
+
+#ifdef ZCL_THERMOSTAT_UI_CFG
+#if NV_ENABLE
+	zcl_nv_thermostatUiCfg_t zcl_nv_thermostatUiCfg;
+
+	st = nv_flashReadNew(1, NV_MODULE_ZCL,  NV_ITEM_ZCL_THERMOSTAT_UI_CFG, sizeof(zcl_nv_thermostatUiCfg), (u8*)&zcl_nv_thermostatUiCfg);
+
+	if(st == NV_SUCC){
+		if((zcl_nv_thermostatUiCfg.displayMode != g_zcl_thermostatUICfgAttrs.displayMode)){
+			zcl_nv_thermostatUiCfg.displayMode = g_zcl_thermostatUICfgAttrs.displayMode;
+
+			st = nv_flashWriteNew(1, NV_MODULE_ZCL, NV_ITEM_ZCL_THERMOSTAT_UI_CFG, sizeof(zcl_nv_thermostatUiCfg), (u8*)&zcl_nv_thermostatUiCfg);
+		}
+	}else if(st == NV_ITEM_NOT_FOUND){
+		zcl_nv_thermostatUiCfg.displayMode = g_zcl_thermostatUICfgAttrs.displayMode;
+
+		st = nv_flashWriteNew(1, NV_MODULE_ZCL, NV_ITEM_ZCL_THERMOSTAT_UI_CFG, sizeof(zcl_nv_thermostatUiCfg), (u8*)&zcl_nv_thermostatUiCfg);
+	}
+#else
+	st = NV_ENABLE_PROTECT_ERROR;
+#endif
+#endif
+
+	return st;
+}
+
+/*********************************************************************
+ * @fn      zcl_thermostatDisplayMode_restore
+ *
+ * @brief
+ *
+ * @param   None
+ *
+ * @return
+ */
+nv_sts_t zcl_thermostatDisplayMode_restore(void)
+{
+	nv_sts_t st = NV_SUCC;
+
+#ifdef ZCL_THERMOSTAT_UI_CFG
+#if NV_ENABLE
+	zcl_nv_thermostatUiCfg_t zcl_nv_thermostatUiCfg;
+
+	st = nv_flashReadNew(1, NV_MODULE_ZCL,  NV_ITEM_ZCL_THERMOSTAT_UI_CFG, sizeof(zcl_nv_thermostatUiCfg), (u8*)&zcl_nv_thermostatUiCfg);
+
+	if(st == NV_SUCC){
+		g_zcl_thermostatUICfgAttrs.displayMode = zcl_nv_thermostatUiCfg.displayMode;
+	}
+#else
+	st = NV_ENABLE_PROTECT_ERROR;
+#endif
+#endif
+
+	return st;
+}

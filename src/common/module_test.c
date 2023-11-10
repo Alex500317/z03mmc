@@ -749,7 +749,7 @@ void moduleTest_spi(void){
 #endif
 
 /* I2C Clock */
-#define I2C_CLOCK					200000//200K
+//#define I2C_CLOCK					200000//200K
 
 /* I2C slave ID */
 #define I2C_SLAVE_ID				0x5A

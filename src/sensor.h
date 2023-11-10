@@ -11,9 +11,10 @@ extern volatile uint32_t timer_measure_cb; // time start measure
 #define SHT4xB_I2C_ADDR		0x45
 
 typedef struct _measured_data_t {
-	uint16_t	battery_mv; // mV
-	int16_t		temp; // x 0.01 C
-	int16_t		humi; // x 0.01 %
+	u16		battery_mv; // mV
+	s16		temp; // x 0.01 C
+	s16		humi; // x 0.01 %
+	u16 		battery_level;
 } measured_data_t;
 
 extern u8 sensor_i2c_addr;

@@ -7,6 +7,7 @@
 #include "zcl_include.h"
 #include "bdb.h"
 #include "ota.h"
+#include "device.h"
 #if ZBHCI_EN
 #include "zbhci.h"
 #endif
@@ -127,22 +128,36 @@ u8 is_comfort(s16 t, u16 h) {
 
 void read_sensor_and_save() {
 	read_sensor();
+#ifdef ZCL_THERMOSTAT_UI_CFG
+	if (g_zcl_thermostatUICfgAttrs.displayMode == 2) {
+		// (°F) = (Temperature in degrees Celsius (°C) * 9/5) + 32.
+		show_big_number_x10((measured_data.temp * 9 / 50) + 320, 2); // convert C to F
+	} else
+		g_zcl_thermostatUICfgAttrs.displayMode = 1;
+		show_big_number_x10(measured_data.temp / 10, 1);
+#else
+	g_zcl_temperatureAttrs.measuredValue = measured_data.temp;
 
+	show_big_number_x10(measured_data.temp / 10, 1);
+#endif
 	g_zcl_temperatureAttrs.measuredValue = measured_data.temp;
     g_zcl_relHumidityAttrs.measuredValue = measured_data.humi;
 
     g_zcl_powerAttrs.batteryVoltage = (u8)(measured_data.battery_mv / 100);
     // batteryPercentage = level in zigbee sepulkas
-    u16 zigbee_sepulkas = (measured_data.battery_mv - BATTERY_SAFETY_THRESHOLD)/4;
-    if(zigbee_sepulkas > 200)
-    	zigbee_sepulkas = 200;
-    g_zcl_powerAttrs.batteryPercentage = zigbee_sepulkas;
+    measured_data.battery_level = (measured_data.battery_mv - BATTERY_SAFETY_THRESHOLD)/4;
+    if(measured_data.battery_level > 200)
+    	measured_data.battery_level = 200;
+    g_zcl_powerAttrs.batteryPercentage = (u8)measured_data.battery_level;
 
-    // update lcd
-    show_temp_symbol(1);
-    show_big_number(measured_data.temp / 10, 1);
+
+#if BOARD == BOARD_CGDK2
+    show_small_number_x10(measured_data.humi / 10, 1);
+    show_battery_symbol(true);
+#else
     show_small_number(measured_data.humi / 100, 1);
     show_battery_symbol(g_zcl_powerAttrs.batteryPercentage < 10);
+#endif
 #if defined(SHOW_SMILEY)
     show_smiley(
         is_comfort(measured_data.temp, measured_data.humi) ? 1 : 2
@@ -218,7 +233,6 @@ void app_task(void)
 			if(g_sensorAppCtx.bindTime) {
 				if(clock_time_exceed(g_sensorAppCtx.bindTime,	45 *1000 * 1000)) { // 45 sec
 					show_blink_screen();
-					update_lcd();
 					drv_pm_sleep(PM_SLEEP_MODE_DEEPSLEEP, PM_WAKEUP_SRC_PAD, 0);
 				}
 			}
@@ -234,8 +248,12 @@ void sensorDeviceSysException(void)
 {
 #if DEBUG_ENABLE
 	extern volatile u16 T_evtExcept[4];
-	show_big_number(T_evtExcept[0], false);
+	show_big_number_x10(T_evtExcept[0], 0);
+#if BOARD == BOARD_CGDK2
+	show_small_number_x10(T_evtExcept[1], false);
+#else
 	show_small_number(T_evtExcept[1], false);
+#endif
 	update_lcd();
 	drv_pm_sleep(PM_SLEEP_MODE_DEEPSLEEP, 0, 20*1000);
 #else
@@ -287,16 +305,16 @@ void populate_date_code() {
 
 
 void populate_hw_version() {
-	/*
-	HW   | LCD I2C   addr | SHTxxx   I2C addr | Note
------|----------------|-------------------|---------
-B1.4 | 0x3C           | 0x70   (SHTC3)    |
-B1.5 | UART!          | 0x70   (SHTC3)    |
-B1.6 | UART!          | 0x44   (SHT4x)    |
-B1.7 | 0x3C           | 0x44   (SHT4x)    | Test   original string HW
-B1.9 | 0x3E           | 0x44   (SHT4x)    |
-B2.0 | 0x3C           | 0x44   (SHT4x)    | Test   original string HW
-	*/
+/*
+ HW  | LCD I2C addr | SHTxxx I2C addr | Note
+-----|--------------|-----------------|---------
+B1.4 | 0x3C         | 0x70   (SHTC3)  |
+B1.5 | UART!        | 0x70   (SHTC3)  |
+B1.6 | UART!        | 0x44   (SHT4x)  |
+B1.7 | 0x3C         | 0x44   (SHT4x)  | Test   original string HW
+B1.9 | 0x3E         | 0x44   (SHT4x)  |
+B2.0 | 0x3C         | 0x44   (SHT4x)  | Test   original string HW
+*/
     if (i2c_address_lcd == B14_I2C_ADDR) {
         if (sensor_version == 0)
             g_zcl_basicAttrs.hwVersion = 14;

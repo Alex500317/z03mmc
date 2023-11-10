@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#define SHOW_SMILEY
+
 // BUTTON
 #define BUTTON1               		GPIO_PA5  // reset test point
 #define PA5_FUNC			  		AS_GPIO
@@ -29,7 +31,8 @@ extern "C" {
 
 #define	PULL_WAKEUP_SRC_PB6	  		PM_PIN_PULLUP_10K
 
-#define I2C_CLOCK					100000 // kHz
+#define I2C_CLOCK					400000 // kHz
+#define LCD_BUF_SIZE	6
 
 #define I2C_SCL 	GPIO_PC2
 #define I2C_SDA 	GPIO_PC3
@@ -55,22 +58,6 @@ extern "C" {
 #if UART_PRINTF_MODE
 	#define	DEBUG_INFO_TX_PIN	    GPIO_SWS //print
 #endif
-
-
-enum{
-	VK_SW1 = 0x01,
-	VK_SW2 = 0x02
-};
-
-#define	KB_MAP_NORMAL	{\
-		{VK_SW1,}, \
-		{VK_SW2,}, }
-
-#define	KB_MAP_NUM		KB_MAP_NORMAL
-#define	KB_MAP_FN		KB_MAP_NORMAL
-
-#define KB_DRIVE_PINS  {NULL }
-#define KB_SCAN_PINS   {BUTTON1,  BUTTON2}
 
 
 /* Disable C linkage for C++ Compilers: */

@@ -10,5 +10,6 @@ typedef struct {
     u32               time_posted;
 } app_reporting_t;
 
+extern app_reporting_t app_reporting[ZCL_REPORTING_TABLE_NUM];
 
 void app_reportAttrTimerStart();

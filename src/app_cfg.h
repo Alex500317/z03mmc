@@ -53,68 +53,13 @@ extern "C" {
 #define TOUCHLINK_SUPPORT				0
 #define FIND_AND_BIND_SUPPORT			0
 
-/* Board ID */
-#define BOARD_826x_EVK					0
-#define BOARD_826x_DONGLE				1
-#define BOARD_826x_DONGLE_PA			2
-#define BOARD_8258_EVK					3
-#define BOARD_8258_EVK_V1P2				4//C1T139A30_V1.2
-#define BOARD_8258_DONGLE				5
-#define BOARD_8278_EVK					6
-#define BOARD_8278_DONGLE				7
-#define BOARD_B91_EVK					8
-#define BOARD_B91_DONGLE				9
-#define BOARD_8258_03MMC				10
-
-/* Board define */
-#if defined(MCU_CORE_826x)
-#if !PA_ENABLE
-	#define BOARD						BOARD_826x_DONGLE
-#else
-	#define BOARD						BOARD_826x_DONGLE_PA
-#endif
-	#define CLOCK_SYS_CLOCK_HZ  		32000000
-#elif defined(MCU_CORE_8258)
-#if (CHIP_TYPE == TLSR_8258_1M)
-	#define FLASH_CAP_SIZE_1M			1
-#endif
-	#define BOARD						BOARD_8258_03MMC//BOARD_8258_DONGLE//BOARD_8258_EVK
-	#define CLOCK_SYS_CLOCK_HZ  		24000000 //48000000
-#elif defined(MCU_CORE_8278)
-	#define FLASH_CAP_SIZE_1M			1
-	#define BOARD						BOARD_8278_DONGLE//BOARD_8278_EVK
-	#define CLOCK_SYS_CLOCK_HZ  		48000000
-#elif defined(MCU_CORE_B91)
-	#define FLASH_CAP_SIZE_1M			1
-	#define BOARD						BOARD_B91_DONGLE//BOARD_B91_EVK
-	#define CLOCK_SYS_CLOCK_HZ  		48000000
-#else
-	#error "MCU is undefined!"
-#endif
+#define CLOCK_SYS_CLOCK_HZ  		24000000 //48000000
 
 /* Board include */
-#if (BOARD == BOARD_826x_EVK)
-	#include "board_826x_evk.h"
-#elif (BOARD == BOARD_826x_DONGLE)
-	#include "board_826x_dongle.h"
-#elif (BOARD == BOARD_826x_DONGLE_PA)
-	#include "board_826x_dongle_pa.h"
-#elif (BOARD == BOARD_8258_03MMC)
-	#include "board_8258_03mmc.h"
-#elif (BOARD == BOARD_8258_DONGLE)
-	#include "board_8258_dongle.h"
-#elif (BOARD == BOARD_8258_EVK)
-	#include "board_8258_evk.h"
-#elif (BOARD == BOARD_8258_EVK_V1P2)
-	#include "board_8258_evk_v1p2.h"
-#elif (BOARD == BOARD_8278_EVK)
-	#include "board_8278_evk.h"
-#elif (BOARD == BOARD_8278_DONGLE)
-	#include "board_8278_dongle.h"
-#elif (BOARD == BOARD_B91_EVK)
-	#include "board_b91_evk.h"
-#elif (BOARD == BOARD_B91_DONGLE)
-	#include "board_b91_dongle.h"
+#if (BOARD == BOARD_LYWSD03MMC)
+	#include "board_lyws03mmc.h"
+#elif (BOARD == BOARD_CGDK2)
+	#include "board_cgdk2.h"
 #endif
 
 #define READ_SENSOR_TIMER 	10000 // ms
@@ -157,14 +102,21 @@ extern "C" {
 //#define ZCL_IAS_ZONE_SUPPORT						1
 #define ZCL_TEMPERATURE_MEASUREMENT_SUPPORT			1
 #define ZCL_RELATIVE_HUMIDITY_SUPPORT   			1
+#define ZCL_THERMOSTAT_UI_CFG_SUPPORT				1
 //#define ZCL_POLL_CTRL_SUPPORT						1
 #define ZCL_OTA_SUPPORT								1
+#define REJOIN_FAILURE_TIMER						1
 
 
+// for consistency
 // for consistency
 #if ZCL_RELATIVE_HUMIDITY_SUPPORT
 #define ZCL_RELATIVE_HUMIDITY
 #define ZCL_RELATIVE_HUMIDITY_MEASUREMENT
+#endif
+#if ZCL_THERMOSTAT_UI_CFG_SUPPORT
+#define ZCL_THERMOSTAT_UI_CFG
+#define NV_ITEM_ZCL_THERMOSTAT_UI_CFG       (NV_ITEM_APP_GP_TRANS_TABLE + 1)    // see sdk/proj/drivers/drv_nv.h
 #endif
 
 #define DEFAULT_POLL_RATE							(10 * (4 * POLL_RATE_QUARTERSECONDS))
@@ -189,8 +141,6 @@ typedef enum{
 /**********************************************************************
  * Sensor configuration
  */
-
-#define SHOW_SMILEY
 
 /* Disable C linkage for C++ Compilers: */
 #if defined(__cplusplus)

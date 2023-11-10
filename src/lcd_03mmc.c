@@ -1,6 +1,6 @@
 //#include "compiler.h"
 #include "tl_common.h"
-#include "app_cfg.h"
+#if BOARD == BOARD_LYWSD03MMC
 #include "chip_8258/timer.h"
 
 #include "app_i2c.h"
@@ -66,9 +66,20 @@ typedef struct __attribute__((packed)) _dma_uart_buf_t {
                                         --1.7--         --0.7--
                            BAT 1.3
 */
-_attribute_data_retention_ u8 display_buff[6];
-_attribute_data_retention_ u8 display_cmp_buff[6];
-_attribute_data_retention_ u8 i2c_address_lcd; // = 0x78; // B1.4 uses Address 0x78 and B1.9 uses 0x7c
+#define LCD_SYM_H	0x67	// "H"
+#define LCD_SYM_i	0x40	// "i"
+#define LCD_SYM_L	0xE0	// "L"
+#define LCD_SYM_o	0xC6	// "o"
+
+#define LCD_SYM_0	0xF5	// "0"
+
+#define TMP_SYM_C	0xA0	// "°C"
+#define TMP_SYM_F	0x60	// "°F"
+
+u8 display_buff[LCD_BUF_SIZE];
+u8 display_cmp_buff[LCD_BUF_SIZE];
+u8 i2c_address_lcd; // = 0x78; // B1.4 uses Address 0x78 and B1.9 uses 0x7c
+u8 lcd_blink;
 dma_uart_buf_t utxb;
 
 const u8 lcd_init_cmd_b14[] =	{0x80,0x3B,0x80,0x02,0x80,0x0F,0x80,0x95,0x80,0x88,0x80,0x88,0x80,0x88,0x80,0x88,0x80,0x19,0x80,0x28,0x80,0xE3,0x80,0x11};
@@ -97,24 +108,6 @@ const u8 lcd_init_b19[]	=	{
 const u8 display_numbers[16] = {0xF5,0x05,0xD3,0x97,0x27,0xb6,0xf6,0x15,0xf7,0xb7,0x77,0xe6,0xf0,0xc7,0xf2,0x72};
 
 #define lcd_send_i2c_buf(b, a)  send_i2c(i2c_address_lcd, (u8 *) b, a)
-
-void init_lcd(void){
-	i2c_address_lcd = (u8) test_i2c_device(B14_I2C_ADDR << 1);
-	if (i2c_address_lcd) { // B1.4, B1.7, B2.0
-// 		GPIO_PB6 set in app_config.h!
-		gpio_setup_up_down_resistor(GPIO_PB6, PM_PIN_PULLUP_10K); // LCD on low temp needs this, its an unknown pin going to the LCD controller chip
-		pm_wait_ms(50);
-		lcd_send_i2c_buf((u8 *) lcd_init_cmd_b14, sizeof(lcd_init_cmd_b14));
-		lcd_send_i2c_buf((u8 *) lcd_init_clr_b14, sizeof(lcd_init_clr_b14));
-	} else {
-		i2c_address_lcd = (u8) test_i2c_device(B19_I2C_ADDR << 1);
-		if (i2c_address_lcd) { // B1.9
-			lcd_send_i2c_buf((u8 *) lcd_init_b19, sizeof(lcd_init_b19));
-			lcd_send_i2c_buf((u8 *) lcd_init_b19, sizeof(lcd_init_b19));
-		}
-		// else B1.5, B1.6 uses UART (i2c_address_lcd = 0)
-	}
-}
 
 /* B1.5, B1.6 (UART LCD)
   u8 * p = display_buff; */
@@ -233,17 +226,34 @@ void update_lcd(void){
 		send_to_lcd();
 		memcpy(display_cmp_buff, display_buff, sizeof(display_buff));
 	}
+	if(lcd_blink == 0xf2) {
+		lcd_blink = 0xf0;
+		lcd_send_i2c_buf(&lcd_blink, 1);
+	}
 }
 
-void show_number(u8 position,u8 number){
-	if(position>5 || position == 2 || number >9)return;
-    display_buff[position] = display_numbers[number] & 0xF7;
+void show_reboot_screen(void) {
+	memset(&display_buff, 0xff, sizeof(display_buff));
+	update_lcd();
 }
 
-void show_temp_symbol(u8 symbol){/*1 = C, 2 = F*/
-	display_buff[2] &= ~0xE0;
-	if(symbol==1)display_buff[2]|=0xA0;
-	else if(symbol==2)display_buff[2]|=0x60;
+void init_lcd(void){
+	i2c_address_lcd = (u8) test_i2c_device(B14_I2C_ADDR << 1);
+	if (i2c_address_lcd) { // B1.4, B1.7, B2.0
+// 		GPIO_PB6 set in app_config.h!
+		gpio_setup_up_down_resistor(GPIO_PB6, PM_PIN_PULLUP_10K); // LCD on low temp needs this, its an unknown pin going to the LCD controller chip
+		pm_wait_ms(50);
+		lcd_send_i2c_buf((u8 *) lcd_init_cmd_b14, sizeof(lcd_init_cmd_b14));
+		lcd_send_i2c_buf((u8 *) lcd_init_clr_b14, sizeof(lcd_init_clr_b14));
+	} else {
+		i2c_address_lcd = (u8) test_i2c_device(B19_I2C_ADDR << 1);
+		if (i2c_address_lcd) { // B1.9
+			lcd_send_i2c_buf((u8 *) lcd_init_b19, sizeof(lcd_init_b19));
+			lcd_send_i2c_buf((u8 *) lcd_init_b19, sizeof(lcd_init_b19));
+		}
+		// else B1.5, B1.6 uses UART (i2c_address_lcd = 0)
+	}
+	show_reboot_screen();
 }
 
 void show_ble_symbol(bool state){
@@ -266,27 +276,65 @@ void show_smiley(u8 state){/*0=off, 1=happy, 2=sad*/
 	else if(state==2)display_buff[2]|=0x06;
 }
 
-void show_big_number(int16_t number, bool point){
-	if(number >1999)return;
-	if(number < -99)return;
-	display_buff[5] = (number > 999)?0x08:0x00;
-	if(number < 0){
-		number = -number;
-		display_buff[5] = 2;
+/* number in 0.1 (-995..19995), Show: -99 .. -9.9 .. 199.9 .. 1999 */
+__attribute__((optimize("-Os"))) void show_big_number_x10(s16 number, u8 symbol){
+	display_buff[2] &= ~0xE0;
+	if(symbol==1)
+		display_buff[2] |= TMP_SYM_C;
+	else if(symbol==2)
+		display_buff[2] |= TMP_SYM_F;
+	if (number > 19995) {
+   		display_buff[3] = 0;
+   		display_buff[4] = LCD_SYM_i; // "i"
+   		display_buff[5] = LCD_SYM_H; // "H"
+	} else if (number < -995) {
+   		display_buff[3] = 0;
+   		display_buff[4] = LCD_SYM_o; // "o"
+   		display_buff[5] = LCD_SYM_L; // "L"
+	} else {
+		display_buff[5] = 0;
+		/* number: -995..19995 */
+		if (number > 1995 || number < -95) {
+			display_buff[4] = 0; // no point, show: -99..1999
+			if (number < 0){
+				number = -number;
+				display_buff[5] = 2; // "-"
+			}
+			number = (number / 10) + ((number % 10) > 5); // round(div 10)
+		} else { // show: -9.9..199.9
+			display_buff[4] = 0x08; // point
+			if (number < 0){
+				number = -number;
+				display_buff[5] = 2; // "-"
+			}
+		}
+		/* number: -99..1999 */
+		if (number > 999) display_buff[5] |= 0x08; // "1" 1000..1999
+		if (number > 99) display_buff[5] |= display_numbers[number / 100 % 10];
+		if (number > 9) display_buff[4] |= display_numbers[number / 10 % 10];
+		else display_buff[4] |= LCD_SYM_0; // "0"
+	    display_buff[3] = display_numbers[number %10];
 	}
-	display_buff[4] = point?0x08:0x00;
-	if(number > 99)display_buff[5] |= display_numbers[number / 100 % 10] & 0xF7;
-	if(number > 9)display_buff[4] |= display_numbers[number / 10 % 10] & 0xF7;
-	if(number < 9)display_buff[4] |= display_numbers[0] & 0xF7;
-    display_buff[3] = display_numbers[number %10] & 0xF7;
 }
 
-void show_small_number(u16 number, bool percent){
-	if(number >99)return;
+/* -9 .. 99 */
+__attribute__((optimize("-Os"))) void show_small_number(s16 number, bool percent){
+	display_buff[1] = display_buff[1] & 0x08; // and battery
 	display_buff[0] = percent?0x08:0x00;
-	display_buff[1] = display_buff[1] & 0x08;
-	if(number > 9)display_buff[1] |= display_numbers[number / 10 % 10] & 0xF7;
-    display_buff[0] |= display_numbers[number %10] & 0xF7;
+	if (number > 99) {
+		display_buff[0] |= LCD_SYM_i; // "i"
+		display_buff[1] |= LCD_SYM_H; // "H"
+	} else if (number < -9) {
+		display_buff[0] |= LCD_SYM_o; // "o"
+		display_buff[1] |= LCD_SYM_L; // "L"
+	} else {
+		if (number < 0) {
+			number = -number;
+			display_buff[1] = 2; // "-"
+		}
+		if (number > 9) display_buff[1] |= display_numbers[number / 10 % 10];
+		display_buff[0] |= display_numbers[number %10];
+	}
 }
 
 
@@ -296,9 +344,11 @@ void show_blink_screen(void) {
 	display_buff[3] = BIT(7); // "_"
 	display_buff[4] = BIT(7); // "_"
 	display_buff[5] = BIT(7); // "_"
-	send_to_lcd();
+	update_lcd();
 	if(i2c_address_lcd == B19_I2C_ADDR << 1) {
-		u8 b = 0xf2;
-		lcd_send_i2c_buf(&b, 1);
+		lcd_blink = 0xf2;
+		lcd_send_i2c_buf(&lcd_blink, 1);
 	}
 }
+
+#endif // BOARD == BOARD_LYWSD03MMC

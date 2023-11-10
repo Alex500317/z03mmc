@@ -61,6 +61,14 @@
 	#define APP_IMAGE_ADDR					0x0
 #endif
 
+/* Board ID */
+#define BOARD_LYWSD03MMC				10
+#define BOARD_CGDK2						1
+
+/* Board define */
+#ifndef BOARD
+#define BOARD						BOARD_LYWSD03MMC // BOARD_LYWSD03MMC or BOARD_CGDK2
+#endif
 
 /* Chip IDs */
 #define TLSR_8267							0x00

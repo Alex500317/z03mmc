@@ -1,7 +1,8 @@
 
 PROJECT_NAME ?= z03mmc
 
-TEL_CHIP := -DMCU_CORE_8258=1 -DEND_DEVICE=1 -D__PROJECT_TL_CONTACT_SENSOR_8258__=1 -DMCU_STARTUP_8258 -DMIMIC_HEIMAN=0
+#TEL_CHIP ?= -DBOARD=BOARD_LYWSD03MMC
+TEL_CHIP += -DMCU_CORE_8258=1 -DEND_DEVICE=1 -D__PROJECT_TL_CONTACT_SENSOR_8258__=1 -DMCU_STARTUP_8258 -DMIMIC_HEIMAN=0
 
 LIBS := -ldrivers_8258 -lzb_ed
 
@@ -119,7 +120,6 @@ LS_INCLUDE := -L$(SDK_PATH)/platform/lib -L$(SDK_PATH)/zigbee/lib/tc32 -L$(SDK_P
 LST_FILE := $(OUT_PATH)/$(PROJECT_NAME).lst
 BIN_FILE := $(OUT_PATH)/$(PROJECT_NAME).bin
 ELF_FILE := $(OUT_PATH)/$(PROJECT_NAME).elf
-OTA_FILE := $(OUT_PATH)/$(PROJECT_NAME).ota
 
 SIZEDUMMY := sizedummy
 
@@ -140,12 +140,6 @@ $(ELF_FILE): $(OBJ_LIST)
 $(LST_FILE): $(ELF_FILE)
 	@echo 'Invoking: TC32 Create Extended Listing'
 	@$(TC32_PATH)tc32-elf-objdump -x -D -l -S  $(ELF_FILE)  > $(LST_FILE)
-	@echo 'Finished building: $@'
-	@echo ' '
-
-$(OTA_FILE): $(BIN_FILE)
-	@echo ' '
-	@$(PYTHON) $(MAKE_PATH)/make_ota.py $(BIN_FILE) -o $(OTA_FILE)
 	@echo 'Finished building: $@'
 	@echo ' '
 
@@ -175,12 +169,12 @@ endif
 	@echo ' '
 
 
-secondary-outputs: $(OTA_FILE) $(BIN_FILE) $(LST_FILE) $(SIZEDUMMY)
+secondary-outputs: $(BIN_FILE) $(LST_FILE) $(SIZEDUMMY)
 
 
 flash: $(BIN_FILE)
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z15 -a-50 -s fsw 0
-	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z5 we 0 $(BIN_FILE)
+	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -z5 we 0x20000 $(BIN_FILE)
 	@$(PYTHON) $(MAKE_PATH)/TlsrPgm.py -p$(PGM_PORT) -w -m i
 
 reset:

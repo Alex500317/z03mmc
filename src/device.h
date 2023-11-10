@@ -91,6 +91,13 @@ typedef struct {
 	u16 tolerance;
 }zcl_relHumidityAttr_t;
 
+/**
+ *  @brief Defined for thermostat UI config cluster attributes
+ */
+typedef struct {
+	u8 displayMode;
+}zcl_thermostatUICfgAttr_t;
+
 
 /**
  *  @brief  Defined for poll control cluster attributes
@@ -110,6 +117,13 @@ typedef struct _comfort_t {
 	u16 h[2];
 } scomfort_t;
 
+/**
+ *  @brief Defined for saving thermostat attributes
+ */
+typedef struct {
+	u8	displayMode;
+} zcl_nv_thermostatUiCfg_t;
+
 /**********************************************************************
  * GLOBAL VARIABLES
  */
@@ -127,8 +141,15 @@ extern const af_simple_descriptor_t sensorDevice_simpleDesc;
 extern zcl_basicAttr_t g_zcl_basicAttrs;
 extern zcl_identifyAttr_t g_zcl_identifyAttrs;
 extern zcl_powerAttr_t g_zcl_powerAttrs;
+#ifdef ZCL_THERMOSTAT_UI_CFG
+extern zcl_thermostatUICfgAttr_t g_zcl_thermostatUICfgAttrs;
+#endif
+#ifdef ZCL_TEMPERATURE_MEASUREMENT
 extern zcl_temperatureAttr_t g_zcl_temperatureAttrs;
+#endif
+#ifdef ZCL_RELATIVE_HUMIDITY_MEASUREMENT
 extern zcl_relHumidityAttr_t g_zcl_relHumidityAttrs;
+#endif
 // extern zcl_iasZoneAttr_t g_zcl_iasZoneAttrs;
 extern zcl_pollCtrlAttr_t g_zcl_pollCtrlAttrs;
 
@@ -152,6 +173,9 @@ void sensorDevice_zclCheckInStart(void);
 void sensorDevice_leaveCnfHandler(nlme_leave_cnf_t *pLeaveCnf);
 void sensorDevice_leaveIndHandler(nlme_leave_ind_t *pLeaveInd);
 void sensorDevice_otaProcessMsgHandler(u8 evt, u8 status);
+
+nv_sts_t zcl_thermostatDisplayMode_save(void);
+nv_sts_t zcl_thermostatDisplayMode_restore(void);
 
 
 #endif /* _DEVICE_H_ */
